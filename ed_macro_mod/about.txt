@@ -1,0 +1,12 @@
+
+-- New: added more macros (1000 macros)
+-- Macros can be saved and loaded.
+
+-- ED.EX from Euphoria v4.0.5 modified for recordable macros.
+--  Current features are: 10 programmable macros -- ESC, j -- accesses the macro menu,
+--  view/record/stop-record/select-current-macro from the macro menu,
+--  F12 plays the current macro.
+
+--example:  ESCAPE,'f',CR,ARROW_RIGHT,BS,'e',ARROW_LEFT
+
+-- Be careful to save your work, and use -- ESC, m -- to compare changes.
