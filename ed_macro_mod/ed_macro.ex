@@ -1,3 +1,4 @@
+-- Copyright (c) 2020 James Cook
 
 -- 1000 macros for business purposes.
 

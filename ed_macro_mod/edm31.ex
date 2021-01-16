@@ -1,4 +1,4 @@
-
+-- Copyright (c) 2020 James Cook
 -- Filename: edm31.ex
 -- Euphoria's editor with keystoke macros
 --

@@ -1,8 +1,9 @@
+-- Copyright (c) 2020 James Cook
 
 -- No control keys, for international keyboards.
 
 -- Comment out this line for international keyboards:
-with define USE_CONTROL_KEYS
+--with define USE_CONTROL_KEYS
 
 -- NOTE: To use all features,
 -- Disable "Console shortcut Properties option": [x] "Enable Ctrl key shortcuts"
@@ -109,12 +110,10 @@ end ifdef
 -- end jjc
 
 -- special input characters
-constant 
-		 CONTROL_C = 3
-
 ifdef USE_CONTROL_KEYS then
 constant 
 		 CONTROL_B = 2,
+		 CONTROL_C = 3,
 		 CONTROL_D = 4,   -- alternate key for line-delete  
 		 CONTROL_L = 12,
 		 CONTROL_N = 14,
@@ -127,6 +126,7 @@ constant
 elsedef
 constant 
 		 CONTROL_B = -999,
+		 CONTROL_C = -999,
 		 CONTROL_D = -999,   -- alternate key for line-delete  
 		 CONTROL_L = -999,
 		 CONTROL_N = -999,
