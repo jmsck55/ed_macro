@@ -1,6 +1,9 @@
 
 -- No control keys, for international keyboards.
 
+-- Comment this line out for international keyboards:
+with define USE_CONTROL_KEYS
+
 -- NOTE: To use all features,
 -- Disable "Console shortcut Properties option": [x] "Enable Ctrl key shortcuts"
 
@@ -79,7 +82,7 @@ with trace
 constant TRUE = 1,
 	 FALSE = 0
 
--- jjc, thanks K_D_R
+-- begin jjc, thanks K_D_R
 -- patch to fix Linux screen positioning
 -- I think this is J Brown's code:
 procedure get_real_text_starting_position()
@@ -107,16 +110,34 @@ end ifdef
 -- end jjc
 
 -- special input characters
-constant --CONTROL_B = 2,
-		 CONTROL_C = 3 --,
--- 		 CONTROL_D = 4,   -- alternate key for line-delete  
--- 		 CONTROL_L = 12,
--- 		 CONTROL_P = 16,  -- alternate key for PAGE-DOWN in Linux.
--- 						  -- DOS uses this key for printing or something.
--- 		 CONTROL_R = 18,
--- 		 CONTROL_T = 20,
--- 		 CONTROL_U = 21   -- alternate key for PAGE-UP in Linux
-		 
+constant 
+		 CONTROL_C = 3
+
+ifdef USE_CONTROL_KEYS then
+constant 
+		 CONTROL_B = 2,
+		 CONTROL_D = 4,   -- alternate key for line-delete  
+		 CONTROL_L = 12,
+		 CONTROL_N = 14,
+		 CONTROL_P = 16,  -- alternate key for PAGE-DOWN in Linux.
+						  -- DOS uses this key for printing or something.
+		 CONTROL_R = 18,
+		 CONTROL_T = 20,
+		 CONTROL_U = 21,   -- alternate key for PAGE-UP in Linux
+		 CONTROL_Y = 25
+elsedef
+constant 
+		 CONTROL_B = -999,
+		 CONTROL_D = -999,   -- alternate key for line-delete  
+		 CONTROL_L = -999,
+		 CONTROL_N = -999,
+		 CONTROL_P = -999,  -- alternate key for PAGE-DOWN in Linux.
+						  -- DOS uses this key for printing or something.
+		 CONTROL_R = -999,
+		 CONTROL_T = -999,
+		 CONTROL_U = -999,   -- alternate key for PAGE-UP in Linux
+		 CONTROL_Y = -999
+end ifdef
 
 integer ESCAPE, CR, NUM_PAD_ENTER, BS, HOME, END, CONTROL_HOME, CONTROL_END,
 	PAGE_UP, PAGE_DOWN, INSERT, NUM_PAD_SLASH,
@@ -145,8 +166,13 @@ ifdef UNIX then
 	BS = 127 -- 263
 	HOME = 262 
 	END = 360 
-	--CONTROL_HOME = CONTROL_T -- (top)
-	--CONTROL_END = CONTROL_B  -- (bottom)
+ifdef USE_CONTROL_KEYS then
+	CONTROL_HOME = CONTROL_T -- (top)
+	CONTROL_END = CONTROL_B  -- (bottom)
+elsedef
+	CONTROL_HOME = -999 -- (top)
+	CONTROL_END = -999  -- (bottom)
+end ifdef
 	PAGE_UP = 339 
 	PAGE_DOWN = 338 
 	INSERT = 331
@@ -154,12 +180,22 @@ ifdef UNIX then
 	XDELETE = -999 -- 127 -- in xterm
 	ARROW_LEFT = 260
 	ARROW_RIGHT = 261
-	--CONTROL_ARROW_LEFT = CONTROL_L  -- (left)
-	--CONTROL_ARROW_RIGHT = CONTROL_R -- (right)
+ifdef USE_CONTROL_KEYS then
+	CONTROL_ARROW_LEFT = CONTROL_L  -- (left)
+	CONTROL_ARROW_RIGHT = CONTROL_R -- (right)
+elsedef
+	CONTROL_ARROW_LEFT = -999  -- (left)
+	CONTROL_ARROW_RIGHT = -999 -- (right)
+end ifdef
 	ARROW_UP = 259
 	ARROW_DOWN = 258
-	--CONTROL_ARROW_UP = ARROW_UP
-	--CONTROL_ARROW_DOWN = ARROW_DOWN
+ifdef USE_CONTROL_KEYS then
+	CONTROL_ARROW_UP = CONTROL_Y
+	CONTROL_ARROW_DOWN = CONTROL_N
+elsedef
+	CONTROL_ARROW_UP = -999
+	CONTROL_ARROW_DOWN = -999
+end ifdef
 	window_swap_keys = {265,266,267,268,269,270,271,272,273,274} -- F1 - F10
 	F1 = 265
 	F10 = 274
@@ -186,8 +222,13 @@ object kc
 	BS = 8
 	HOME = kc[KC_HOME] --327
 	END = kc[KC_END] --335
+ifdef USE_CONTROL_KEYS then
 	CONTROL_HOME = HOME + KM_CONTROL -- 583
 	CONTROL_END = END + KM_CONTROL --591
+elsedef
+	CONTROL_HOME = -999
+	CONTROL_END = -999
+end ifdef
 	PAGE_UP = kc[KC_PRIOR] --329
 	PAGE_DOWN = kc[KC_NEXT] --337
 	INSERT = kc[KC_INSERT] -- 338
@@ -195,13 +236,23 @@ object kc
 	XDELETE = -999 -- never
 	ARROW_LEFT = kc[KC_LEFT] -- 331
 	ARROW_RIGHT = kc[KC_RIGHT] --333
+ifdef USE_CONTROL_KEYS then
 	CONTROL_ARROW_LEFT = ARROW_LEFT + KM_CONTROL --587
 	CONTROL_ARROW_RIGHT = ARROW_RIGHT + KM_CONTROL --589
+elsedef
+	CONTROL_ARROW_LEFT = -999
+	CONTROL_ARROW_RIGHT = -999
+end ifdef
 	ARROW_UP = kc[KC_UP] --328
 	ARROW_DOWN = kc[KC_DOWN] -- 336
 	-- begin jjc:
-	CONTROL_ARROW_UP = ARROW_UP + KM_CONTROL
-	CONTROL_ARROW_DOWN = ARROW_DOWN + KM_CONTROL
+ifdef USE_CONTROL_KEYS then
+	CONTROL_ARROW_UP = ARROW_UP + KM_ALT
+	CONTROL_ARROW_DOWN = ARROW_DOWN + KM_ALT
+elsedef
+	CONTROL_ARROW_UP = -999
+	CONTROL_ARROW_DOWN = -999
+end ifdef
 	-- end jjc
 	window_swap_keys = {kc[KC_F1],
 				kc[KC_F2],
@@ -219,7 +270,11 @@ object kc
 	F12 = kc[KC_F12] --344
 	NUM_PAD_ENTER = kc[KC_RETURN] --284
 	NUM_PAD_SLASH = kc[KC_DIVIDE] --309     
+ifdef USE_CONTROL_KEYS then
 	CONTROL_DELETE = DELETE + KM_CONTROL --595 -- key for line-delete 
+elsedef
+	CONTROL_DELETE = -999
+end ifdef
 	ignore_keys = {kc[KC_CAPITAL], kc[KC_CONTROL]+KM_CONTROL, kc[KC_SHIFT]+KM_SHIFT, kc[KC_MENU]+KM_ALT}
 	kc = 0
 end ifdef
@@ -239,10 +294,10 @@ sequence current_macro = "default"
 sequence macro_buffer = HOME & "-- " & ARROW_DOWN
 
 -- Starting CR line ending:
-constant CONTROL_CHAR = 254  -- change funny control chars to this --jjc
-constant WINDOWS_CR = {"\r\n", CONTROL_CHAR & "{#0D}" & CONTROL_CHAR & CONTROL_CHAR & "{#0A}" & CONTROL_CHAR}
-constant LINUX_CR = {"\n", CONTROL_CHAR & "{#0A}" & CONTROL_CHAR}
-constant APPLE_CR = {"\r", CONTROL_CHAR & "{#0D}" & CONTROL_CHAR}
+constant CONTROL_CHAR = 254  -- change funny control chars to this -- jjc
+constant WINDOWS_CR = {"\r\n", "\\r\\n"}
+constant LINUX_CR = {"\n", "\\n"}
+constant APPLE_CR = {"\r", "\\r"}
 constant BINARY_CR = {"",""}
 sequence line_ending = WINDOWS_CR -- or {"",""} for none
 
@@ -302,7 +357,7 @@ constant ACCENT = 0  -- Set to 1 enables read accented characters from
 
 -------- END OF USER-MODIFIABLE PARAMETERS ------------------------------------
 
--- jjc:
+-- begin jjc:
 integer first_time = TRUE
 
 function get_CUSTOM_KEYSTROKES(sequence key)
@@ -346,14 +401,14 @@ end procedure
 -- Special keys that we can handle. Some are duplicates.
 -- If you add more, you should list them here:
 constant SPECIAL_KEYS = {ESCAPE, BS, DELETE, XDELETE, PAGE_UP, PAGE_DOWN,
-			--CONTROL_P, CONTROL_U, CONTROL_T, CONTROL_B,
-			--CONTROL_R, CONTROL_L,
-			INSERT, CONTROL_DELETE, 
-			--CONTROL_D, 
-			ARROW_LEFT, ARROW_RIGHT, ARROW_UP, 
-			ARROW_DOWN, CONTROL_ARROW_LEFT, CONTROL_ARROW_RIGHT,
+			INSERT, HOME, END, 
+			ARROW_LEFT, ARROW_RIGHT, ARROW_UP, ARROW_DOWN, 
+			CONTROL_P, CONTROL_U, CONTROL_T, CONTROL_B,
+			CONTROL_R, CONTROL_L, CONTROL_Y, CONTROL_N,
+			CONTROL_DELETE, CONTROL_D,
+			CONTROL_ARROW_LEFT, CONTROL_ARROW_RIGHT,
 			CONTROL_ARROW_UP, CONTROL_ARROW_DOWN, -- jjc
-			HOME, END, CONTROL_HOME, CONTROL_END,
+			CONTROL_HOME, CONTROL_END,
 			CUSTOM_KEY} & window_swap_keys & ignore_keys
 
 -- output device:
@@ -781,7 +836,7 @@ type file_number(integer x)
 	return x >= -1
 end type
 
---jjc:
+-- jjc:
 type is_bytes(sequence b)
 	for i = 1 to length(b) do
 		if not integer(b[i]) then
@@ -836,7 +891,7 @@ natural start_line, start_col
 
 sequence error_message
 
-sequence file_history, command_history, search_history, replace_history, macro_file_history, macro_name_history --jjc
+sequence file_history, command_history, search_history, replace_history, macro_file_history, macro_name_history -- jjc
 file_history = {}
 command_history = {}
 search_history = {}
@@ -1081,11 +1136,13 @@ procedure set_position(natural window_line, positive_int column)
 	end if
 end procedure
 
+constant ESCAPE_CHARS = "n'\"t\\r",
+		 ESCAPED_CHARS = "\n'\"\t\\\r"
 
 function clean(sequence line)
 -- replace control characters with a graphics character
 -- Linux: replace CR-LF with LF (for now)
-	integer c, i, len, flag
+	integer c, i, len, flag, f
 	
 	flag = (not length(line_ending[1])) -- jjc
 	
@@ -1102,10 +1159,15 @@ function clean(sequence line)
 -- 			line[i] = CONTROL_CHAR  -- replace with displayable character
 -- 			control_chars = TRUE
 -- 		end if
-		
-		if flag or (c < SAFE_CHAR and c != '\t') or c > MAX_SAFE_CHAR then -- jjc
+		f = find(c, ESCAPED_CHARS)
+		if not flag and f then -- jjc
+			line = line[1..i-1] & "\\" & ESCAPE_CHARS[f] & line[i+1..$]
+			i += 1
+			
+		elsif flag or c < SAFE_CHAR or c > MAX_SAFE_CHAR then -- jjc
+		--if flag or (c < SAFE_CHAR and c != '\t') or c > MAX_SAFE_CHAR then -- jjc
 			len = length(line)
-			line = line[1..i-1] & sprintf("%s{#%02x}%s",{CONTROL_CHAR,c,CONTROL_CHAR}) & line[i+1..$]
+			line = line[1..i-1] & sprintf("\\x%02x",{c}) & line[i+1..$] -- two digit hex value
 			i += (length(line) - len)
 		end if
 		i += 1
@@ -2210,7 +2272,7 @@ end procedure
 function delete_trailing_white(sequence name)
 -- get rid of blanks, tabs, newlines at end of string
 	while length(name) > 0 do
-		if find(name[$], "\n\r\t ") then --jjc, reserved for future versions
+		if find(name[$], "\n\r\t ") then -- jjc, reserved for future versions
 			name = name[1..$-1]
 		else
 			exit
@@ -2321,6 +2383,25 @@ procedure save_file(sequence save_name, integer keep = TRUE) -- jjc
 		while length(line) do
 			ch = line[1]
 			line = line[2..$]
+			if ch = '\\' then
+				-- jjc
+				ch = line[1]
+				if ch = 'x' then
+					tmp = value("#" & line[2..3])
+					if tmp[1] = GET_SUCCESS then
+						if atom(tmp[2]) then
+							ch = tmp[2]
+							line = line[4..$]
+						end if
+					end if
+				else
+					found = find(ch, ESCAPE_CHARS)
+					if found then
+						ch = ESCAPED_CHARS[found]
+						line = line[2..$]
+					end if
+				end if
+			end if
 			if ch = CONTROL_CHAR then
 				found = find(CONTROL_CHAR, line)
 				if found then
@@ -2799,18 +2880,12 @@ procedure get_escape(boolean help)
 		
 	elsif command[1] = 'b' then -- jjc
 		set_top_line("insert binary hex string: 0x")
-		answer = hex_to_bytes(key_gets("", {}, TRUE))
-		if answer[1] = GET_SUCCESS then
-			normal_video()
-			if length(answer[2]) then
-				set_modified()
-				-- inserting a sequence of chars
-				insert_string(answer[2])
-			end if
-			return
-		else
-			set_top_line("unable to use hex string as entered, please try again")
-		end if
+		answer = key_gets("", {}, TRUE)
+		normal_video()
+		set_modified()
+		-- inserting a sequence of chars
+		insert_string(CONTROL_CHAR & answer & CONTROL_CHAR)
+		return
 
 	elsif command[1] = 'j' then -- jjc
 		if length(recording_macro) then
@@ -3100,9 +3175,10 @@ procedure insert_string(sequence text)
 			c = text[i]
 			ob = {c} -- jjc
 			if c != CONTROL_CHAR then
-				if (c < SAFE_CHAR and c != '\t') or c > MAX_SAFE_CHAR then -- jjc
+				if c < SAFE_CHAR or c > MAX_SAFE_CHAR then -- jjc
+				--if (c < SAFE_CHAR and c != '\t') or c > MAX_SAFE_CHAR then -- jjc
 				--if find(text[i], UNSAFE_CHARS) then -- jjc
-					ob = sprintf("%s{#%02x}%s",{CONTROL_CHAR,c,CONTROL_CHAR})
+					ob = sprintf("\\x%02x",{c})
 				end if
 			end if
 			tmp = buffer_at(b_line)
@@ -3404,7 +3480,7 @@ procedure edit_file()
 				end if
 				delete_char()
 
-			elsif key = CONTROL_DELETE then --or key = CONTROL_D then
+			elsif key = CONTROL_DELETE or key = CONTROL_D then
 				tmp = buffer_at(b_line)
 				if not adding_to_kill then
 					kill_buffer = {tmp}
@@ -3418,10 +3494,10 @@ procedure edit_file()
 				delete_line(b_line)
 
 			else
-				if key = PAGE_DOWN then --or key = CONTROL_P then
+				if key = PAGE_DOWN or key = CONTROL_P then
 					page_down()
 
-				elsif key = PAGE_UP then --or key = CONTROL_U then
+				elsif key = PAGE_UP or key = CONTROL_U then
 					page_up()
 
 				elsif key = ARROW_LEFT then
@@ -3430,24 +3506,24 @@ procedure edit_file()
 				elsif key = ARROW_RIGHT then
 					arrow_right()
 
-				elsif key = CONTROL_ARROW_LEFT then --or key = CONTROL_L then
+				elsif key = CONTROL_ARROW_LEFT or key = CONTROL_L then
 					previous_word()
-					
-				elsif key = CONTROL_ARROW_RIGHT then --or key = CONTROL_R then
+
+				elsif key = CONTROL_ARROW_RIGHT or key = CONTROL_R then
 					next_word()
-					
-				elsif key = ARROW_DOWN then
-					arrow_down()
 
 				elsif key = ARROW_UP then
 					arrow_up()
 
-				elsif key = CONTROL_ARROW_DOWN then -- jjc
-					move_text_up()
-					
-				elsif key = CONTROL_ARROW_UP then -- jjc
+				elsif key = ARROW_DOWN then
+					arrow_down()
+
+				elsif key = CONTROL_ARROW_UP or key = CONTROL_Y then -- jjc
 					move_text_down()
-					
+
+				elsif key = CONTROL_ARROW_DOWN or key = CONTROL_N then -- jjc
+					move_text_up()
+
 				elsif key = ' ' then
 					try_auto_complete(key)
 
@@ -3485,11 +3561,10 @@ procedure edit_file()
 					end if
 					goto_line(b_line, len)
 					-- end jjc.
-
-				elsif key = CONTROL_HOME then --or key = CONTROL_T then
+				elsif key = CONTROL_HOME or key = CONTROL_T then
 					goto_line(1, 1)
 
-				elsif key = CONTROL_END then --or key = CONTROL_B then
+				elsif key = CONTROL_END or key = CONTROL_B then
 					goto_line(length_buffer, buffer_at_length(length_buffer))
 
 				elsif key = ESCAPE then
