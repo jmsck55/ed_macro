@@ -1,7 +1,11 @@
 -- Copyright (c) 2020 James Cook
 
 -- speed improvement: (for release versions only)
+ifdef DEBUG then
+with type_check
+elsedef
 without type_check
+end ifdef
 
 -- No control keys, for international keyboards.
 
