@@ -1,7 +1,7 @@
 
 -- No control keys, for international keyboards.
 
--- Comment this line out for international keyboards:
+-- Comment out this line for international keyboards:
 with define USE_CONTROL_KEYS
 
 -- NOTE: To use all features,
@@ -76,8 +76,7 @@ include std/console.e
 include std/filesys.e
 include std/text.e
 
-with trace
--- trace(1)
+-- with trace
 
 constant TRUE = 1,
 	 FALSE = 0
@@ -1531,7 +1530,7 @@ function hex_to_bytes(sequence string)
 			else
 				return {GET_FAIL, bytes}
 			end if
-			if not integer(n) then
+			if not integer(n) or n > 255 or n < 0 then
 				return {GET_FAIL, bytes}
 			end if
 		end for
@@ -2386,19 +2385,19 @@ procedure save_file(sequence save_name, integer keep = TRUE) -- jjc
 			if ch = '\\' then
 				-- jjc
 				ch = line[1]
+				line = line[2..$]
 				if ch = 'x' then
-					tmp = value("#" & line[2..3])
+					tmp = value("#" & line[1..2])
 					if tmp[1] = GET_SUCCESS then
 						if atom(tmp[2]) then
 							ch = tmp[2]
-							line = line[4..$]
+							line = line[3..$]
 						end if
 					end if
 				else
 					found = find(ch, ESCAPE_CHARS)
 					if found then
 						ch = ESCAPED_CHARS[found]
-						line = line[2..$]
 					end if
 				end if
 			elsif ch = CONTROL_CHAR then
