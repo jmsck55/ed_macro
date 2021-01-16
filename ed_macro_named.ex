@@ -2401,8 +2401,7 @@ procedure save_file(sequence save_name, integer keep = TRUE) -- jjc
 						line = line[2..$]
 					end if
 				end if
-			end if
-			if ch = CONTROL_CHAR then
+			elsif ch = CONTROL_CHAR then
 				found = find(CONTROL_CHAR, line)
 				if found then
 					if line[1] = '{' or line[1] = '\"' then
