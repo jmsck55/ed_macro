@@ -1135,8 +1135,8 @@ procedure set_position(natural window_line, positive_int column)
 	end if
 end procedure
 
-constant ESCAPE_CHARS = "n'\"t\\r",
-		 ESCAPED_CHARS = "\n'\"\t\\\r"
+constant ESCAPE_CHARS = "nt\\r",
+		 ESCAPED_CHARS = "\n\t\\\r"
 
 function clean(sequence line)
 -- replace control characters with a graphics character
