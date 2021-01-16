@@ -1,5 +1,8 @@
 -- Copyright (c) 2020 James Cook
 
+-- speed improvement: (for release versions only)
+without type_check
+
 -- No control keys, for international keyboards.
 
 -- Comment out this line for international keyboards:
