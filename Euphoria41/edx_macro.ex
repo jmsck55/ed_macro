@@ -64,6 +64,7 @@ include std/console.e
 include std/filesys.e
 include std/text.e
 include std/pretty.e
+include euphoria/info.e
 
 constant TRUE = 1,
 		 FALSE = 0
@@ -1825,6 +1826,8 @@ procedure ed_macro_menu()
     --done, for now.
     sequence command, answer
     object self_command
+    integer f
+
     if recording_macro then
         if recording_macro = 1 then
             macro = macro[1..$ - 2]
@@ -1835,6 +1838,8 @@ procedure ed_macro_menu()
             -- set it to default macro
             recording_macro = 2
             CUSTOM_KEYSTROKES = macro
+        else
+            recording_macro = 3
         end if
     else
         set_top_line("Record new macro [press enter to skip]? ")
@@ -1846,7 +1851,7 @@ procedure ed_macro_menu()
             return
         end if
     end if
-    set_top_line("Macro name or [enter]: ")
+    set_top_line("Macro name or [press enter]: ")
     macro_history = update_history(macro_history, "")
     command = key_gets("", macro_history)
     if length(command) then
@@ -1854,7 +1859,12 @@ procedure ed_macro_menu()
         self_command = find(command, macros[1])
         if recording_macro = 2 then
             -- replace macro
-            set_top_line("Replace macro \'" & command & "\'? ")
+            if self_command then
+                answer = "Replace"
+            else
+                answer = "Store"
+            end if
+            set_top_line(answer & " macro \'" & command & "\'? ")
             if find('y', key_gets("yn", {})) then
                 if self_command then
                     -- replace
@@ -1877,7 +1887,7 @@ procedure ed_macro_menu()
         end if
         macro_history = update_history(macro_history, command)
     else
-        set_top_line("Export macros [press enter to skip]? ")
+        set_top_line("Export macros, (" & version_string_long(1) & ")? ")
         if find('y', key_gets("yn", {})) then
             self_command = open("ed_macro.txt", "w")
             if self_command = -1 then
@@ -1887,6 +1897,7 @@ procedure ed_macro_menu()
                 for i = 1 to length(answer) do
                     answer[i] = {macros[1][i], macros[2][i]}
                 end for
+                puts(self_command, "\"ed_macro basic\" \"" & version_string_long(1) & "\"\n")
                 pretty_print(self_command, answer, {3})
                 answer = {}
                 close(self_command)
@@ -1909,23 +1920,36 @@ procedure ed_macro_menu()
                     set_top_line("Can\'t import macros.  Unable to open \"ed_macro.txt\"")
                 else
                     answer = get(self_command)
-                    close(self_command)
-                    if answer[1] = GET_SUCCESS then
-                        answer = answer[2]
-                        for i = 1 to length(answer) do
-                            self_command = find(answer[i][1], macros[1])
-                            if self_command then
-                                macros[2][self_command] = answer[i][2]
-                            else
-                                macros[1] = append(macros[1], answer[i][1])
-                                macros[2] = append(macros[2], answer[i][2])
-                            end if
-                        end for
-                        set_top_line(sprintf("Successfully imported %d macros", {length(answer)}))
+                    if answer[1] != GET_SUCCESS then
+                        set_top_line("Couldn\'t read any Euphoria objects in file.")
+                    elsif not equal(answer[2], "ed_macro basic") then
+                        set_top_line("Not using \"ed_macro basic\" import file")
                     else
-                        set_top_line("Couldn\'t import macros, wrong format.")
+                        answer = get(self_command)
+                        if answer[1] != GET_SUCCESS then
+                            set_top_line("Couldn\'t read version in file.")
+                        elsif not equal(answer[2], version_string_long(1)) then
+                            set_top_line("Error: File originated from another platform. Try exporting and compare.")
+                        else
+                            answer = get(self_command)
+                            if answer[1] != GET_SUCCESS then
+                                set_top_line("Couldn\'t import macros, wrong format.")
+                            else
+                                answer = answer[2]
+                                for i = 1 to length(answer) do
+                                    f = find(answer[i][1], macros[1])
+                                    if f then
+                                        macros[2][f] = answer[i][2]
+                                    else
+                                        macros[1] = prepend(macros[1], answer[i][1])
+                                        macros[2] = prepend(macros[2], answer[i][2])
+                                    end if
+                                end for
+                                set_top_line(sprintf("Successfully imported %d macros", {length(answer)}))
+                            end if
+                        end if
                     end if
-                    answer = {}
+                    close(self_command)
                 end if
             end if
         end if
@@ -1947,7 +1971,8 @@ procedure get_escape(boolean help)
 	if help then
 		command = "h"
 	else
-		first_bold("jmod ")
+		first_bold("j")
+		first_bold("help ")
 		first_bold("clone ")
 		first_bold("quit ")
 		first_bold("save ")
