@@ -3,6 +3,8 @@ The future of "ed_macro"
 
 Make a Euphoria v3.1.1 version of ed_macro.ex for DOS and early Windows.  Make a separate 64-bit version as well.
 
+- [x] DOS32, Win32, and Win64 work with limited support for some features.
+
 Make a Web version of ed_macro for Chrome like modern browsers.  Record touch and mouse clicks and keyboard and button clicks.
 
 Try to limit its functionality so that it won't become a killer app.
