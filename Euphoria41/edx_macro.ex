@@ -1887,7 +1887,7 @@ procedure ed_macro_menu()
         end if
         macro_history = update_history(macro_history, command)
     else
-        set_top_line("Export macros, (" & version_string_long(1) & ")? ")
+        set_top_line("Export macros, [" & version_string_long(1) & "]? ")
         if find('y', key_gets("yn", {})) then
             self_command = open("ed_macro.txt", "w")
             if self_command = -1 then
