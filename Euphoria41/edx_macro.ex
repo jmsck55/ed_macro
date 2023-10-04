@@ -1,21 +1,22 @@
+-- Copyright 2023 James Cook
+-- 
+-- Licensed under the Apache License, Version 2.0 (the "License");
+-- you may not use this file except in compliance with the License.
+-- You may obtain a copy of the License at
+-- 
+--     http://www.apache.org/licenses/LICENSE-2.0
+-- 
+-- Unless required by applicable law or agreed to in writing, software
+-- distributed under the License is distributed on an "AS IS" BASIS,
+-- WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+-- See the License for the specific language governing permissions and
+-- limitations under the License.
+--
+------------------------------------------------------------------------------
 -- ed_macro_mod, a recordable macro version of ed.ex
--- Copyright James Cook All Rights Reserved
--- 
--- This program is free software: you can redistribute it and/or modify
--- it under the terms of the GNU General Public License as published by
--- the Free Software Foundation, either version 3 of the License, or
--- (at your option) any later version.
--- 
--- This program is distributed in the hope that it will be useful,
--- but WITHOUT ANY WARRANTY; without even the implied warranty of
--- MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
--- GNU General Public License for more details.
--- 
--- You should have received a copy of the GNU General Public License
--- along with this program.  If not, see <https://www.gnu.org/licenses/>.
--- 
--- You can contact me online using my email address: jmsck55@gmail.com
--- 
+-- This is ed_macro basic.  It has limited features compared to ed_macro_named.ex
+-- Its feature is that it runs on all versions of Euphoria, and has an intuitive interface.
+-- It can only open "TEXT" files for now.  Control characters are NOT preserved.
 ------------------------------------------------------------------------------
 
 		----------------------------------------------------------
