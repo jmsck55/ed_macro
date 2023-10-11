@@ -14,10 +14,44 @@
 --
 ------------------------------------------------------------------------------
 -- ed_macro_mod, a recordable macro version of ed.ex
--- This is ed_macro basic.  It has limited features compared to ed_macro_named.ex
--- Its feature is that it runs on all versions of Euphoria, and has an intuitive interface.
--- It can only open "TEXT" files for now.  Control characters are NOT preserved.
+-- This is ed_macro, edx.ex with macros: edm.ex
+-- For Text and Binary Modes.
 ------------------------------------------------------------------------------
+
+-- Tested on OSX 64-bit Euphoria (from 2/2/2015), get it at:
+
+-- OpenEuphoria, v4.1.0
+-- https://openeuphoria.org/
+
+-- Release Notes:
+
+-- NOTE: To use all features, in Windows,
+-- Disable "Console shortcut Properties option": [x] "Enable Ctrl key shortcuts"
+
+-- Changes to the original editor, edx.ex, by jmsck55 are marked by: -- jjc
+-- Other authors are encouraged to use their own initials or screen name.
+
+-- NOTES:
+
+-- jjc, work on tabs.
+-- jjc, color of parenthises (), needs to be not grey
+
+-- On OSX:
+
+-- built-in defines:
+-- 
+-- EU4
+-- EU4_1
+-- EU4_1_0 
+-- CONSOLE
+-- OSX
+-- BSD
+-- UNIX
+-- X86_64
+-- BITS64
+-- LONG64
+
+-- end jjc
 
 		----------------------------------------------------------
 		--       This Euphoria Editor was developed by          --
@@ -64,38 +98,41 @@ include std/os.e
 include std/console.e
 include std/filesys.e
 include std/text.e
-include std/pretty.e
-include euphoria/info.e
+
+include std/eds.e -- jjc
+include std/io.e -- jjc
+include std/machine.e -- jjc
+include std/math.e -- jjc
+include std/pretty.e -- jjc
+
+with trace
 
 constant TRUE = 1,
 		 FALSE = 0
 
--- begin jjc, thanks K_D_R
--- patch to fix Linux screen positioning
--- I think this is J Brown's code:
-procedure get_real_text_starting_position()
-		sequence sss = ""
-		integer ccc
-		puts(1, 27&"[6n")
-		while 1 do
-			ccc = get_key()
-			if ccc = 'R' then
-				exit
-			end if
-			if ccc != -1 then
-				sss &= ccc
-			end if
-		end while
-		sss = sss[3..$]
-		sequence aa, bb
-		aa = value(sss[1..find(';', sss)-1])
-		bb = value(sss[find(';', sss)+1..$])
-		position(aa[2], bb[2])
-end procedure
-ifdef LINUX then
-	get_real_text_starting_position()
-end ifdef
--- end jjc
+    -- patch to fix Linux screen positioning
+procedure get_real_text_starting_position() 
+		sequence sss = "" 
+		integer ccc 
+		puts(1, 27&"[6n") 
+		while 1 do 
+			ccc = get_key() 
+			if ccc = 'R' then 
+				exit 
+			end if 
+			if ccc != -1 then 
+				sss &= ccc 
+			end if 
+		end while 
+		sss = sss[3..$] 
+		sequence aa, bb 
+		aa = value(sss[1..find(';', sss)-1]) 
+		bb = value(sss[find(';', sss)+1..$]) 
+		position(aa[2], bb[2]) 
+end procedure 
+ifdef LINUX then 
+	get_real_text_starting_position() 
+end ifdef 
 
 -- special input characters
 constant CONTROL_B = 2,
@@ -113,7 +150,7 @@ integer ESCAPE, CR, NUM_PAD_ENTER, BS, HOME, END, CONTROL_HOME, CONTROL_END,
 		PAGE_UP, PAGE_DOWN, INSERT, NUM_PAD_SLASH,
 		DELETE, XDELETE, ARROW_LEFT, ARROW_RIGHT,
 		CONTROL_ARROW_LEFT, CONTROL_ARROW_RIGHT, ARROW_UP, ARROW_DOWN,
-		F1, F10, F11, F12, 
+		F1, F10, F11, F12, -- can't use F11 on newer computers -- jjc
 		CONTROL_DELETE  -- key for line-delete 
 						-- (not available on some systems)
 sequence delete_cmd, compare_cmd
@@ -121,8 +158,54 @@ integer SAFE_CHAR -- minimum ASCII char that's safe to display
 sequence ignore_keys
 sequence window_swap_keys
 sequence window_name
-		 
+
 ifdef UNIX then
+ifdef OSX then -- jjc
+	-- begin jjc
+	SAFE_CHAR = 32 -- {min, max} = {32' ', 126'~'}
+	delete_cmd = "rm "
+	compare_cmd = "diff "
+	ESCAPE = 27
+	CR = 10
+	NUM_PAD_ENTER = 10
+	BS = 127 -- 263
+	HOME = -999 -- 262 -- goes to top of terminal in OSX
+	END = -999 -- 360 -- goes to bottom of terminal in OSX
+	CONTROL_HOME = CONTROL_T -- (top)
+	CONTROL_END = CONTROL_B  -- (bottom)
+	PAGE_UP = -999 -- 339 
+	PAGE_DOWN = -999 -- 338 
+	INSERT = -999 -- 331
+	DELETE = {27, 91, 51, 126} -- 330
+	XDELETE = -999 -- 127 -- in xterm
+	ARROW_LEFT = {27, 91, 68} -- 260
+	ARROW_RIGHT = {27, 91, 67} -- 261
+	CONTROL_ARROW_LEFT = -999 -- CONTROL_L  -- (left)
+	CONTROL_ARROW_RIGHT = -999 -- CONTROL_R -- (right)
+	ARROW_UP = {27, 91, 65} -- 259
+	ARROW_DOWN = {27, 91, 66} -- 258
+	window_swap_keys = {
+		{27, 79, 80}, -- F1
+		{27, 79, 81}, -- F2
+		{27, 79, 82}, -- F3
+		{27, 79, 83}, -- F4
+		{27, 91, 49, 53, 126}, -- F5
+		{27, 91, 49, 55, 126}, -- F6
+		{27, 91, 49, 56, 126}, -- F7
+		{27, 91, 49, 57, 126}, -- F8
+		{27, 91, 50, 48, 126}, -- F9
+		{27, 91, 50, 49, 126} -- F10
+	} -- {265,266,267,268,269,270,271,272,273,274} -- F1 - F10
+	F1 = {27, 79, 80} -- 265
+	F10 = {27, 91, 50, 49, 126} -- 274
+	F11 = -999 -- 275
+	F12 = {27, 91, 50, 52, 126} -- 276
+	CONTROL_DELETE = {27, 91, 51, 59, 53, 126} -- DELETE -- key for line-delete 
+							-- (not available on some systems)
+	NUM_PAD_SLASH = -999  -- Please check on console and Xterm
+	ignore_keys = {}
+	-- end jjc
+elsedef -- jjc
 	SAFE_CHAR = 32
 	delete_cmd = "rm "
 	compare_cmd = "diff "
@@ -154,6 +237,7 @@ ifdef UNIX then
 							-- (not available on some systems)
 	NUM_PAD_SLASH = -999  -- Please check on console and Xterm
 	ignore_keys = {}
+end ifdef -- jjc
 elsifdef WINDOWS then
 object kc
 
@@ -207,17 +291,9 @@ end ifdef
 
 -- make your own specialized macro command(s):
 constant CUSTOM_KEY = F12
--- constant CUSTOM_KEYSTROKES = HOME & "-- " & ARROW_DOWN
-sequence CUSTOM_KEYSTROKES
-CUSTOM_KEYSTROKES = HOME & "-- " & ARROW_DOWN
-integer recording_macro
-sequence macro
-recording_macro = 0
-macro = {}
-sequence macros
-macros = {{},{}} -- no saved macros, yet.
+constant CUSTOM_KEYSTROKES = HOME & "-- " & ARROW_DOWN
 
-constant PROG_INDENT = 4  -- tab width for editing program source files
+constant PROG_INDENT = 8  -- tab width for editing program source files
 						  -- (tab width is 8 for other files)
 -- Euphoria files:
 constant E_FILES = {".e", ".ex", ".exd", ".exw", ".pro", ".cgi", ".esp"}
@@ -289,7 +365,7 @@ constant SCREEN = 1
 
 constant CONTROL_CHAR = 254 -- change funny control chars to this
 
-constant STANDARD_TAB_WIDTH = 8
+constant STANDARD_TAB_WIDTH = 8 -- jjc, 8
 
 constant MAX_WINDOWS = 10 -- F1..F10
 
@@ -308,6 +384,8 @@ end type
 sequence buffer -- In-memory buffer where the file is manipulated.
 -- This is a sequence where each element is a sequence
 -- containing one line of text. Each line of text ends with '\n'
+
+sequence buffer_multi -- remember if the line ended with an open multiline token
 
 positive_int screen_length  -- number of lines on physical screen
 positive_int screen_width
@@ -377,6 +455,7 @@ boolean stop         -- indicates when to stop processing current buffer
 sequence kill_buffer -- kill buffer of deleted lines or characters
 kill_buffer = {}
 
+
 boolean adding_to_kill  -- TRUE if still accumulating deleted lines/chars
 
 boolean multi_color     -- use colors for keywords etc.
@@ -399,12 +478,11 @@ natural start_line, start_col
 
 sequence error_message
 
-sequence file_history, command_history, search_history, replace_history, macro_history
+sequence file_history, command_history, search_history, replace_history
 file_history = {}
 command_history = {}
 search_history = {}
 replace_history = {}
-macro_history = {}
 
 sequence config -- video configuration
 
@@ -538,6 +616,32 @@ procedure set_absolute_position(natural window_line, positive_int column)
 	position(window_base + window_line, column)
 end procedure
 
+function get_multiline( integer bline )
+	if bline > 0 and bline < length( buffer_multi ) then
+		integer multi = buffer_multi[bline]
+		if not multiline_token( multi ) then
+			-- have to back up...
+			integer prev = bline - 1
+			while prev and not multiline_token( buffer_multi[prev] ) do
+				prev -= 1
+			end while
+			for re_line = prev + 1 to bline do
+				SyntaxColor( buffer[re_line], , get_multiline( re_line - 1 ) )
+				buffer_multi[re_line] = last_multiline_token()
+			end for
+			multi = buffer_multi[bline]
+		end if
+		return multi
+	end if
+	return 0
+end function
+
+procedure set_multiline( integer bline, multiline_token multi )
+	if bline > 0 and bline < length( buffer_multi ) then
+		buffer_multi[bline] = multi
+	end if
+end procedure
+
 procedure DisplayLine(buffer_line bline, window_line sline, boolean all_clear)
 -- display a buffer line on a given line on the screen
 -- if all_clear is TRUE then the screen area has already been cleared before getting here.
@@ -549,7 +653,8 @@ procedure DisplayLine(buffer_line bline, window_line sline, boolean all_clear)
 	set_absolute_position(sline, 1)
 	if multi_color then
 		-- color display
-		color_line = SyntaxColor(this_line)
+		color_line = SyntaxColor(this_line, ,get_multiline( bline - 1 ))
+		set_multiline( bline, last_multiline_token() )
 		last_pos = 0
 		
 		for i = 1 to length(color_line) do
@@ -682,6 +787,7 @@ function add_line(file_number file_no)
 	
 	line = convert_tabs(STANDARD_TAB_WIDTH, edit_tab_width, clean(line))
 	buffer = append(buffer, line)
+	buffer_multi &= -1
 	return TRUE
 end function
 
@@ -690,6 +796,7 @@ procedure new_buffer()
 	buffer_list &= 0 -- place holder for new buffer
 	buffer_number = length(buffer_list) 
 	buffer = {}
+	buffer_multi = {}
 end procedure
 
 procedure read_file(file_number file_no)
@@ -981,6 +1088,12 @@ constant W_BUFFER_NUMBER = 1,
 		 W_WINDOW_LENGTH = 4,
 		 W_B_LINE = 11
 
+enum
+	B_BUFFER,
+	B_MODIFIED,
+	B_VERSION,
+	B_MULTILINE,
+	$
 procedure save_state()
 -- save current state variables for a window
 	window_list[window_number] = {buffer_number, buffer_version, window_base, 
@@ -988,7 +1101,7 @@ procedure save_state()
 								  dot_e, control_chars, cr_removed, file_name, 
 								  b_line, b_col, s_line, s_col, s_shift, 
 								  edit_tab_width}
-	buffer_list[buffer_number] = {buffer, modified, buffer_version}
+	buffer_list[buffer_number] = {buffer, modified, buffer_version, buffer_multi}
 end procedure
 
 procedure restore_state(window_id w)
@@ -1001,9 +1114,10 @@ procedure restore_state(window_id w)
 	window_number = w
 	buffer_number =  state[W_BUFFER_NUMBER]
 	buffer_info = buffer_list[buffer_number]
-	buffer = buffer_info[1]
-	modified = buffer_info[2]
-	buffer_version = buffer_info[3]
+	buffer         = buffer_info[B_BUFFER]
+	modified       = buffer_info[B_MODIFIED]
+	buffer_version = buffer_info[B_VERSION]
+	buffer_multi   = buffer_info[B_MULTILINE]
 	buffer_list[buffer_number] = 0 -- save space
 	
 	-- restore other variables
@@ -1109,7 +1223,7 @@ function delete_window()
 -- delete the current window    
 	boolean buff_in_use
 	
-	buffer_list[buffer_number] = {buffer, modified, buffer_version}
+	buffer_list[buffer_number] = {buffer, modified, buffer_version, buffer_multi}
 	window_list = window_list[1..window_number-1] & 
 				  window_list[window_number+1..length(window_list)]
 	buff_in_use = FALSE
@@ -1336,9 +1450,6 @@ function key_gets(sequence hot_keys, sequence history)
 		position(line, column)
 		
 		char = next_key()
-		if recording_macro = 1 then
-			macro &= {char}
-		end if
 		
 		if char = CR or char = 10 then
 			exit
@@ -1786,143 +1897,6 @@ procedure delete_editbuff()
 	end if
 end procedure
 
-procedure ed_macro_menu()
-    --done, for now.
-    sequence command, answer
-    object self_command
-    integer f
-
-    if recording_macro then
-        if recording_macro = 1 then
-            macro = macro[1..$ - 2]
-            recording_macro = 3 -- in macro menu
-        end if
-        set_top_line("Finish recording new macro [press enter to skip]? ")
-        if find('y', key_gets("yn", {})) then
-            -- set it to default macro
-            recording_macro = 2
-            CUSTOM_KEYSTROKES = macro
-        else
-            recording_macro = 3
-        end if
-    else
-        set_top_line("Record new macro [press enter to skip]? ")
-        if find('y', key_gets("yn", {})) then
-            -- record new macro
-            recording_macro = 1
-            macro = {}
-            set_top_line("RECORDING KEYSTROKES: Press ESC, then \'j\', when done.")
-            return
-        end if
-    end if
-    set_top_line("Macro name or [press enter]: ")
-    macro_history = update_history(macro_history, "")
-    command = key_gets("", macro_history)
-    if length(command) then
-        -- does macro already exist?
-        self_command = find(command, macros[1])
-        if recording_macro = 2 then
-            -- replace macro
-            if self_command then
-                answer = "Replace"
-            else
-                answer = "Store"
-            end if
-            set_top_line(answer & " macro \'" & command & "\'? ")
-            if find('y', key_gets("yn", {})) then
-                if self_command then
-                    -- replace
-                    macros[2][self_command] = macro
-                else
-                    -- add to top of the list
-                    macros[1] = {command} & macros[1]
-                    macros[2] = {macro} & macros[2]
-                end if
-                recording_macro = 0
-                macro = {}
-            end if
-        else
-            if self_command then
-                -- macro already exists, make the current macro
-                CUSTOM_KEYSTROKES = macros[2][self_command]
-            else
-                set_top_line("No macro \'" & command & "\'")
-            end if
-        end if
-        macro_history = update_history(macro_history, command)
-    else
-        set_top_line("Export macros, [" & version_string_long(1) & "]? ")
-        if find('y', key_gets("yn", {})) then
-            self_command = open("ed_macro.txt", "w")
-            if self_command = -1 then
-                set_top_line("Can\'t export macros.  Unable to open \"ed_macro.txt\"")
-            else
-                answer = repeat(0, length(macros[1]))
-                for i = 1 to length(answer) do
-                    answer[i] = {macros[1][i], macros[2][i]}
-                end for
-                puts(self_command, "\"ed_macro basic\" \"" & version_string_long(1) & "\"\n")
-                pretty_print(self_command, answer, {3})
-                answer = {}
-                close(self_command)
-                set_top_line("Saved macro information to \"ed_macro.txt\"")
-                if recording_macro != 1 then
-                    self_command = "ed_macro.txt"
-                    if HOT_KEYS then
-                        self_command = {ESCAPE, 'c', ESCAPE, 'n'} & self_command 
-                    else
-                        self_command = {ESCAPE, 'c', '\n', ESCAPE, 'n', '\n'} & self_command 
-                    end if
-                    add_queue(self_command & CR)
-                end if
-            end if
-        else
-            set_top_line("Import macros from \"ed_macro.txt\" [press enter to skip]? ")
-            if find('y', key_gets("yn", {})) then
-                self_command = open("ed_macro.txt", "r")
-                if self_command = -1 then
-                    set_top_line("Can\'t import macros.  Unable to open \"ed_macro.txt\"")
-                else
-                    answer = get(self_command)
-                    if answer[1] != GET_SUCCESS then
-                        set_top_line("Couldn\'t read any Euphoria objects in file.")
-                    elsif not equal(answer[2], "ed_macro basic") then
-                        set_top_line("Not using \"ed_macro basic\" import file")
-                    else
-                        answer = get(self_command)
-                        if answer[1] != GET_SUCCESS then
-                            set_top_line("Couldn\'t read version in file.")
-                        elsif not equal(answer[2], version_string_long(1)) then
-                            set_top_line("Error: File originated from another platform. Try exporting and compare.")
-                        else
-                            answer = get(self_command)
-                            if answer[1] != GET_SUCCESS then
-                                set_top_line("Couldn\'t import macros, wrong format.")
-                            else
-                                answer = answer[2]
-                                for i = 1 to length(answer) do
-                                    f = find(answer[i][1], macros[1])
-                                    if f then
-                                        macros[2][f] = answer[i][2]
-                                    else
-                                        macros[1] = prepend(macros[1], answer[i][1])
-                                        macros[2] = prepend(macros[2], answer[i][2])
-                                    end if
-                                end for
-                                set_top_line(sprintf("Successfully imported %d macros", {length(answer)}))
-                            end if
-                        end if
-                    end if
-                    close(self_command)
-                end if
-            end if
-        end if
-    end if
-    if recording_macro = 3 then -- in macro menu.
-        recording_macro = 1 -- continue recording.
-    end if
-end procedure
-
 procedure get_escape(boolean help)
 -- process escape command
 	sequence command, answer
@@ -1935,7 +1909,6 @@ procedure get_escape(boolean help)
 	if help then
 		command = "h"
 	else
-		first_bold("j")
 		first_bold("help ")
 		first_bold("clone ")
 		first_bold("quit ")
@@ -1952,13 +1925,10 @@ procedure get_escape(boolean help)
 		first_bold("mods ")
 		text_color(TOP_LINE_TEXT_COLOR)
 		puts(SCREEN, "ddd CR: ")
-		command = key_gets("jhcqswnedfrlm", {}) & ' '
+		command = key_gets("hcqswnedfrlm", {}) & ' '
 	end if
 
-	if command[1] = 'j' then
-		ed_macro_menu()
-
-	elsif command[1] = 'f' then
+	if command[1] = 'f' then
 		replacing = FALSE
 		searching = search(FALSE)
 
@@ -2082,6 +2052,9 @@ procedure get_escape(boolean help)
 				answer = "yes"
 			end if
 			if answer[1] = 'y' then
+				ifdef OSX then
+					self_command = "/Applications/Safari.app/Contents/MacOS/Safari " & self_command
+				end ifdef
 				system(self_command & SLASH & "html" & SLASH & "index.html")
 			else
 				normal_video()
@@ -2125,19 +2098,12 @@ procedure insert(char key)
 	sequence tail
 
 	set_modified()
-	tail = buffer[b_line][b_col..length(buffer[b_line])]
+	tail = buffer[b_line][b_col..$]
 	if key = CR or key = '\n' then
 		-- truncate this line and create a new line using tail
-		buffer[b_line] = buffer[b_line][1..b_col-1] & '\n'
-		
-		-- make room for new line:
-		buffer = append(buffer, 0)
-		for i = length(buffer)-1 to b_line+1 by -1 do
-			buffer[i+1] = buffer[i]
-		end for
-		
-		-- store new line
-		buffer[b_line+1] = tail
+		buffer[b_line] = head( buffer[b_line], b_col-1) & '\n'
+		buffer = eu:insert( buffer, tail, b_line + 1 )
+		buffer_multi = eu:insert( buffer_multi, -1, b_line + 1 )
 		
 		if s_line = window_length then
 			arrow_down()
@@ -2178,12 +2144,12 @@ procedure insert_string(sequence text)
 		if text[i] = CR or text[i] = '\n' then
 			insert(text[i])
 		else
-			buffer[b_line] = buffer[b_line][1..b_col-1] & text[i] &
-							 buffer[b_line][b_col..length(buffer[b_line])]
+			buffer[b_line] = splice( buffer[b_line], text[i], b_col )
 			b_col += 1
 			if i = length(text) then
 				DisplayLine(b_line, s_line, FALSE)
 			end if
+			
 		end if
 	end for
 	goto_line(save_line, save_col)
@@ -2242,8 +2208,7 @@ procedure try_auto_complete(char key)
 	end if
 	if key = CR then
 		if b_col >= first_non_blank then
-			buffer[b_line] = buffer[b_line][1..b_col-1] & leading_white &
-							 buffer[b_line][b_col..length(buffer[b_line])]
+			buffer[b_line] = eu:splice( buffer[b_line], leading_white, b_col )
 			insert(CR)
 			skip_white()
 		else
@@ -2265,9 +2230,8 @@ procedure insert_kill_buffer()
 		insert_string(kill_buffer)
 	else
 		-- inserting a sequence of lines
-		buffer = buffer[1..b_line - 1] &
-				 kill_buffer &
-				 buffer[b_line..length(buffer)]
+		buffer       = splice( buffer, kill_buffer, b_line )
+		buffer_multi = splice( buffer_multi, repeat( -1, length( kill_buffer ) ), b_line )
 		DisplayWindow(b_line, s_line)
 		b_col = 1
 		s_col = 1
@@ -2284,7 +2248,7 @@ procedure delete_line(buffer_line dead_line)
 	for i = dead_line to length(buffer)-1 do
 		buffer[i] = buffer[i+1]
 	end for
-	buffer = buffer[1..length(buffer)-1]
+	buffer = head( buffer, length(buffer)-1)
 	
 	x = dead_line - b_line + s_line
 	if window_line(x) then
@@ -2389,11 +2353,6 @@ procedure edit_file()
 		if good(key) then
 			-- normal key
 			
-		    if recording_macro = 1 then
-	          	if key != CUSTOM_KEY then
-	            	macro &= {key}
-	         	end if
-		    end if
 			if key = CUSTOM_KEY then
 				add_queue(CUSTOM_KEYSTROKES)
 

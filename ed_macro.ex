@@ -14,10 +14,19 @@
 --
 ------------------------------------------------------------------------------
 -- ed_macro_mod, a recordable macro version of ed.ex
--- This is ed_macro basic.  It has limited features compared to ed_macro_named.ex
--- Its feature is that it runs on all versions of Euphoria, and has an intuitive interface.
--- It can only open "TEXT" files for now.  Control characters are NOT preserved.
+-- This is the original ed_macro.ex
 ------------------------------------------------------------------------------
+
+-- 1000 macros for business purposes.
+
+-- New: added more macros (100 macros)
+-- Fixed Linux features
+-- New feature: save and load macros (to be completed)
+
+-- ED.EX from Euphoria v4.0.5 modified for recordable macros.
+--  Current features are: 10 programmable macros -- ESC, j -- accesses the macro menu,
+--  view/record/stop-record/select-current-macro from the macro menu,
+--  F12 plays the current macro.
 
 		----------------------------------------------------------
 		--       This Euphoria Editor was developed by          --
@@ -64,13 +73,15 @@ include std/os.e
 include std/console.e
 include std/filesys.e
 include std/text.e
-include std/pretty.e
-include euphoria/info.e
+
+include std/pretty.e -- jjc
+
+--with trace
 
 constant TRUE = 1,
 		 FALSE = 0
 
--- begin jjc, thanks K_D_R
+-- jjc, thanks K_D_R
 -- patch to fix Linux screen positioning
 -- I think this is J Brown's code:
 procedure get_real_text_starting_position()
@@ -113,7 +124,8 @@ integer ESCAPE, CR, NUM_PAD_ENTER, BS, HOME, END, CONTROL_HOME, CONTROL_END,
 		PAGE_UP, PAGE_DOWN, INSERT, NUM_PAD_SLASH,
 		DELETE, XDELETE, ARROW_LEFT, ARROW_RIGHT,
 		CONTROL_ARROW_LEFT, CONTROL_ARROW_RIGHT, ARROW_UP, ARROW_DOWN,
-		F1, F10, F11, F12, 
+		F1, F10, F11, F12, TAB_KEY, -- jjc
+		NUM_PAD_ASTRISK, NUM_PAD_PLUS, NUM_PAD_MINUS, NUM_PAD_LOCK, -- jjc
 		CONTROL_DELETE  -- key for line-delete 
 						-- (not available on some systems)
 sequence delete_cmd, compare_cmd
@@ -123,6 +135,7 @@ sequence window_swap_keys
 sequence window_name
 		 
 ifdef UNIX then
+	TAB_KEY = '\t' -- jjc
 	SAFE_CHAR = 32
 	delete_cmd = "rm "
 	compare_cmd = "diff "
@@ -153,12 +166,17 @@ ifdef UNIX then
 	CONTROL_DELETE = DELETE -- key for line-delete 
 							-- (not available on some systems)
 	NUM_PAD_SLASH = -999  -- Please check on console and Xterm
+	NUM_PAD_ASTRISK = -999
+	NUM_PAD_PLUS = -999
+	NUM_PAD_MINUS = -999
+	NUM_PAD_LOCK = -999 -- jjc
 	ignore_keys = {}
 elsifdef WINDOWS then
 object kc
 
 	kc = key_codes()
 	
+	TAB_KEY = kc[KC_TAB] -- jjc
 	SAFE_CHAR = 14
 	delete_cmd = "del "
 	compare_cmd = "fc /T "
@@ -167,8 +185,10 @@ object kc
 	BS = 8
 	HOME = kc[KC_HOME] --327
 	END = kc[KC_END] --335
-	CONTROL_HOME = HOME + KM_CONTROL -- 583
-	CONTROL_END = END + KM_CONTROL --591
+	--CONTROL_HOME = HOME + KM_CONTROL -- 583
+	--CONTROL_END = END + KM_CONTROL --591
+	CONTROL_HOME = 1020416 -- control + PageUp -- jjc
+	CONTROL_END = 1020432 -- control + PageDown -- jjc
 	PAGE_UP = kc[KC_PRIOR] --329
 	PAGE_DOWN = kc[KC_NEXT] --337
 	INSERT = kc[KC_INSERT] -- 338
@@ -196,8 +216,12 @@ object kc
 	F12 = kc[KC_F12] --344
 	NUM_PAD_ENTER = kc[KC_RETURN] --284
 	NUM_PAD_SLASH = kc[KC_DIVIDE] --309     
+	NUM_PAD_ASTRISK = kc[KC_MULTIPLY]
+	NUM_PAD_PLUS = kc[KC_ADD]
+	NUM_PAD_MINUS = kc[KC_SUBTRACT]
+	NUM_PAD_LOCK = kc[KC_NUMLOCK] -- jjc
 	CONTROL_DELETE = DELETE + KM_CONTROL --595 -- key for line-delete 
-	ignore_keys = {kc[KC_CAPITAL], kc[KC_CONTROL]+KM_CONTROL, kc[KC_SHIFT]+KM_SHIFT, kc[KC_MENU]+KM_ALT}
+	ignore_keys = {kc[KC_CAPITAL], kc[KC_CONTROL]+KM_CONTROL, kc[KC_SHIFT]+KM_SHIFT, kc[KC_MENU]+KM_ALT, NUM_PAD_LOCK}
 	kc = 0
 end ifdef
 
@@ -207,17 +231,13 @@ end ifdef
 
 -- make your own specialized macro command(s):
 constant CUSTOM_KEY = F12
--- constant CUSTOM_KEYSTROKES = HOME & "-- " & ARROW_DOWN
-sequence CUSTOM_KEYSTROKES
-CUSTOM_KEYSTROKES = HOME & "-- " & ARROW_DOWN
-integer recording_macro
-sequence macro
-recording_macro = 0
-macro = {}
-sequence macros
-macros = {{},{}} -- no saved macros, yet.
+sequence CUSTOM_KEYSTROKES = repeat("", 1000) -- jjc
+CUSTOM_KEYSTROKES[1] = HOME & "-- " & ARROW_DOWN -- jjc
+integer recording_macro = 0 -- jjc
+integer macro = 1
+sequence macro_buffer = {}
 
-constant PROG_INDENT = 4  -- tab width for editing program source files
+constant PROG_INDENT = 8  -- tab width for editing program source files -- jjc
 						  -- (tab width is 8 for other files)
 -- Euphoria files:
 constant E_FILES = {".e", ".ex", ".exd", ".exw", ".pro", ".cgi", ".esp"}
@@ -255,15 +275,16 @@ global constant NORMAL_COLOR = BLACK,   -- GRAY might look better
 				KEYWORD_COLOR = BLUE,
 				BUILTIN_COLOR = MAGENTA,
 				STRING_COLOR = GREEN,   -- BROWN might look better
-				BRACKET_COLOR = {NORMAL_COLOR, YELLOW, BRIGHT_WHITE, 
-								 BRIGHT_BLUE, BRIGHT_RED, BRIGHT_CYAN, 
-								 BRIGHT_GREEN}
+				BRACKET_COLOR = {NORMAL_COLOR}--, YELLOW, BRIGHT_WHITE, -- jjc
+								 --BRIGHT_BLUE, BRIGHT_RED, BRIGHT_CYAN, -- jjc
+								 --BRIGHT_GREEN} -- jjc
 
 -- number of characters to shift left<->right when you move beyond column 80
 constant SHIFT = 4   -- 1..78 should be ok
 
 -- name of edit buffer temp file for Esc m command
-constant TEMPFILE = "editbuff.tmp" 
+constant TEMPFILE = "editbuff.tmp"
+constant MACRO_FILE = "macrobuf.tmp"
 
 constant ACCENT = 0  -- Set to 1 enables read accented characters from
 					 -- keyboard. Useful to write on spanish keyboard, 
@@ -399,12 +420,12 @@ natural start_line, start_col
 
 sequence error_message
 
-sequence file_history, command_history, search_history, replace_history, macro_history
+sequence file_history, command_history, search_history, replace_history, macro_file_history --jjc
 file_history = {}
 command_history = {}
 search_history = {}
 replace_history = {}
-macro_history = {}
+macro_file_history = {} -- jjc
 
 sequence config -- video configuration
 
@@ -651,11 +672,11 @@ function clean(sequence line)
 	end if
 	
 	ifdef UNIX  then
-		if length(line) > 2 and line[$-1] = '\r' then
+		if length(line) > 1 and line[$-1] = '\r' then -- jjc, thanks K_D_R
 			-- DOS file: remove CR
 			cr_removed = TRUE
 			line = line[1..$-2] & '\n'
-	   end if
+		end if
 	end ifdef
 	
 	for i = 1 to length(line)-1 do
@@ -1154,10 +1175,19 @@ function next_key()
 			c = CONTROL_C
 		end if 
 				
-		if c = NUM_PAD_ENTER then
+		if c = TAB_KEY then -- jjc
+			c = '\t'
+		elsif c = NUM_PAD_ENTER then
 			c = CR
 		elsif c = NUM_PAD_SLASH then
 			c = '/'
+		elsif c = NUM_PAD_ASTRISK then
+			c = '*'
+		elsif c = NUM_PAD_PLUS then
+			c = '+'
+		elsif c = NUM_PAD_MINUS then -- jjc
+			c = '-'
+		
 		elsif c = 296 or c = 282 and ACCENT = 1 then
 			-- Discart accent keystroke, and get accented character.
 			c = next_key()
@@ -1293,6 +1323,16 @@ function next_key()
 	return c
 end function
 
+-- function next_key_() -- jjc
+--      object key
+--      key = next_key()
+--      trace(1)
+--      if recording_macro then
+--              macro_buffer &= {key}
+--      end if
+--      return key
+-- end function
+
 procedure refresh_all_windows()
 -- redisplay all the windows
 	window_id w
@@ -1303,7 +1343,7 @@ procedure refresh_all_windows()
 	restore_state(w)
 end procedure
 
-function key_gets(sequence hot_keys, sequence history)
+function key_gets(sequence hot_keys, sequence history, integer macro_record = TRUE) -- jjc
 -- Return an input string from the keyboard.
 -- Handles special editing keys. 
 -- Some keys are "hot" - no Enter required.
@@ -1335,9 +1375,10 @@ function key_gets(sequence hot_keys, sequence history)
 		puts(SCREEN, BLANK_LINE)
 		position(line, column)
 		
-		char = next_key()
-		if recording_macro = 1 then
-			macro &= {char}
+		char = next_key() --bookmark--
+		if recording_macro and macro_record then -- jjc
+			--trace(1)
+			macro_buffer &= {char}
 		end if
 		
 		if char = CR or char = 10 then
@@ -1473,8 +1514,7 @@ procedure replace()
 
 	set_modified()
 	line = buffer[b_line]
-	line = line[1..b_col-1] & replace_string & line[b_col+length(find_string)..
-												length(line)]
+	line = line[1..b_col-1] & replace_string & line[b_col+length(find_string)..length(line)]
 	buffer[b_line] = line
 	-- position at end of replacement string
 	for i = 1 to length(replace_string)-1 do
@@ -1546,8 +1586,7 @@ function search(boolean cont)
 				set_top_line("")
 				puts(SCREEN, "replace with: ")
 				replace_string = key_gets("", replace_history)
-				replace_history = update_history(replace_history, 
-												 replace_string)
+				replace_history = update_history(replace_history, replace_string)
 			end if
 		end if
 	end if
@@ -1670,12 +1709,10 @@ function get_err_line()
 						end if
 					end if
 					file_name = err_lines[1][1..colon_pos+1]
-					start_line = numeric(err_lines[1][colon_pos+3..
-														  length(err_lines[1])])
+					start_line = numeric(err_lines[1][colon_pos+3..length(err_lines[1])])
 					error_message = delete_trailing_white(err_lines[2])
 					if length(err_lines) > 3 then
-						start_col = find('^', expand_tabs(STANDARD_TAB_WIDTH, 
-											  err_lines[length(err_lines)-1]))
+						start_col = find('^', expand_tabs(STANDARD_TAB_WIDTH, err_lines[length(err_lines)-1]))
 					end if
 					return file_name
 				end if
@@ -1786,141 +1823,220 @@ procedure delete_editbuff()
 	end if
 end procedure
 
-procedure ed_macro_menu()
-    --done, for now.
-    sequence command, answer
-    object self_command
-    integer f
+constant ids = 
+-- "\t\n\r\\" &
+{ESCAPE, CR, NUM_PAD_ENTER, BS, HOME, END, CONTROL_HOME, CONTROL_END,
+		PAGE_UP, PAGE_DOWN, INSERT, NUM_PAD_SLASH,
+		DELETE, XDELETE, ARROW_LEFT, ARROW_RIGHT,
+		CONTROL_ARROW_LEFT, CONTROL_ARROW_RIGHT, ARROW_UP, ARROW_DOWN,
+		F1, F10, F11, F12, TAB_KEY, -- jjc
+		NUM_PAD_ASTRISK, NUM_PAD_PLUS, NUM_PAD_MINUS, NUM_PAD_LOCK, -- jjc
+		CONTROL_DELETE}  -- key for line-delete 
+constant names = 
+-- {"\\t","\\n","\\r","\\"} &
+{"ESCAPE", "CR", "NUM_PAD_ENTER", "BS", "HOME", "END", "CONTROL_HOME", "CONTROL_END",
+		"PAGE_UP", "PAGE_DOWN", "INSERT", "NUM_PAD_SLASH",
+		"DELETE", "XDELETE", "ARROW_LEFT", "ARROW_RIGHT",
+		"CONTROL_ARROW_LEFT", "CONTROL_ARROW_RIGHT", "ARROW_UP", "ARROW_DOWN",
+		"F1", "F10", "F11", "F12", "TAB_KEY", -- jjc
+		"NUM_PAD_ASTRISK", "NUM_PAD_PLUS", "NUM_PAD_MINUS", "NUM_PAD_LOCK", -- jjc
+		"CONTROL_DELETE"}  -- key for line-delete 
 
-    if recording_macro then
-        if recording_macro = 1 then
-            macro = macro[1..$ - 2]
-            recording_macro = 3 -- in macro menu
-        end if
-        set_top_line("Finish recording new macro [press enter to skip]? ")
-        if find('y', key_gets("yn", {})) then
-            -- set it to default macro
-            recording_macro = 2
-            CUSTOM_KEYSTROKES = macro
-        else
-            recording_macro = 3
-        end if
-    else
-        set_top_line("Record new macro [press enter to skip]? ")
-        if find('y', key_gets("yn", {})) then
-            -- record new macro
-            recording_macro = 1
-            macro = {}
-            set_top_line("RECORDING KEYSTROKES: Press ESC, then \'j\', when done.")
-            return
-        end if
-    end if
-    set_top_line("Macro name or [press enter]: ")
-    macro_history = update_history(macro_history, "")
-    command = key_gets("", macro_history)
-    if length(command) then
-        -- does macro already exist?
-        self_command = find(command, macros[1])
-        if recording_macro = 2 then
-            -- replace macro
-            if self_command then
-                answer = "Replace"
-            else
-                answer = "Store"
-            end if
-            set_top_line(answer & " macro \'" & command & "\'? ")
-            if find('y', key_gets("yn", {})) then
-                if self_command then
-                    -- replace
-                    macros[2][self_command] = macro
-                else
-                    -- add to top of the list
-                    macros[1] = {command} & macros[1]
-                    macros[2] = {macro} & macros[2]
-                end if
-                recording_macro = 0
-                macro = {}
-            end if
-        else
-            if self_command then
-                -- macro already exists, make the current macro
-                CUSTOM_KEYSTROKES = macros[2][self_command]
-            else
-                set_top_line("No macro \'" & command & "\'")
-            end if
-        end if
-        macro_history = update_history(macro_history, command)
-    else
-        set_top_line("Export macros, [" & version_string_long(1) & "]? ")
-        if find('y', key_gets("yn", {})) then
-            self_command = open("ed_macro.txt", "w")
-            if self_command = -1 then
-                set_top_line("Can\'t export macros.  Unable to open \"ed_macro.txt\"")
-            else
-                answer = repeat(0, length(macros[1]))
-                for i = 1 to length(answer) do
-                    answer[i] = {macros[1][i], macros[2][i]}
-                end for
-                puts(self_command, "\"ed_macro basic\" \"" & version_string_long(1) & "\"\n")
-                pretty_print(self_command, answer, {3})
-                answer = {}
-                close(self_command)
-                set_top_line("Saved macro information to \"ed_macro.txt\"")
-                if recording_macro != 1 then
-                    self_command = "ed_macro.txt"
-                    if HOT_KEYS then
-                        self_command = {ESCAPE, 'c', ESCAPE, 'n'} & self_command 
-                    else
-                        self_command = {ESCAPE, 'c', '\n', ESCAPE, 'n', '\n'} & self_command 
-                    end if
-                    add_queue(self_command & CR)
-                end if
-            end if
-        else
-            set_top_line("Import macros from \"ed_macro.txt\" [press enter to skip]? ")
-            if find('y', key_gets("yn", {})) then
-                self_command = open("ed_macro.txt", "r")
-                if self_command = -1 then
-                    set_top_line("Can\'t import macros.  Unable to open \"ed_macro.txt\"")
-                else
-                    answer = get(self_command)
-                    if answer[1] != GET_SUCCESS then
-                        set_top_line("Couldn\'t read any Euphoria objects in file.")
-                    elsif not equal(answer[2], "ed_macro basic") then
-                        set_top_line("Not using \"ed_macro basic\" import file")
-                    else
-                        answer = get(self_command)
-                        if answer[1] != GET_SUCCESS then
-                            set_top_line("Couldn\'t read version in file.")
-                        elsif not equal(answer[2], version_string_long(1)) then
-                            set_top_line("Error: File originated from another platform. Try exporting and compare.")
-                        else
-                            answer = get(self_command)
-                            if answer[1] != GET_SUCCESS then
-                                set_top_line("Couldn\'t import macros, wrong format.")
-                            else
-                                answer = answer[2]
-                                for i = 1 to length(answer) do
-                                    f = find(answer[i][1], macros[1])
-                                    if f then
-                                        macros[2][f] = answer[i][2]
-                                    else
-                                        macros[1] = prepend(macros[1], answer[i][1])
-                                        macros[2] = prepend(macros[2], answer[i][2])
-                                    end if
-                                end for
-                                set_top_line(sprintf("Successfully imported %d macros", {length(answer)}))
-                            end if
-                        end if
-                    end if
-                    close(self_command)
-                end if
-            end if
-        end if
-    end if
-    if recording_macro = 3 then -- in macro menu.
-        recording_macro = 1 -- continue recording.
-    end if
+procedure get_macro_menu() -- jjc
+-- process macro menu command
+	--object help = FALSE
+	
+	sequence command, filename, tmp
+	--natural line
+	--object self_command
+	integer fn
+
+while 1 do
+	
+	cursor(ED_CURSOR)
+
+	if recording_macro then
+		set_top_line(sprintf("current macro: %d, RECORDING %d macro, ", {macro - 1, recording_macro - 1}))
+	else
+		set_top_line(sprintf("current macro: %d, READY ", {macro -  1}))
+	end if
+	--if help then
+		--command = "h"
+	--else
+		first_bold("xsave ")
+		first_bold("load ")
+		first_bold("view ")
+		first_bold("record ")
+		--first_bold("stop ")
+		text_color(TOP_LINE_TEXT_COLOR)
+		puts(SCREEN, "000-999 CR: ")
+		command = key_gets("xlvr1234567890", {}, FALSE) & ' '
+	--end if
+--trace(1)
+	if command[1] = 'r' then
+		
+		if recording_macro then
+			-- stop-recording
+			--trace(1)
+			if length(macro_buffer) then
+				CUSTOM_KEYSTROKES[recording_macro] = macro_buffer
+			end if
+			macro = recording_macro
+			recording_macro = 0
+			--set_top_line(sprintf("current macro: %d, STOPPED RECORDING. Use F12 to play back recorded macro. CR ", {macro -  1}))
+			--getc(0) -- make the user press Enter.
+			--get_macro_menu()
+		else
+			-- record macros
+			macro_buffer = {}
+			recording_macro = macro
+			--set_top_line(sprintf("current macro: %d, RECORDING, go back to macro menu to stop recording.", {macro -  1}))
+			--get_macro_menu()
+		end if
+		
+	elsif command[1] = 'x' then
+		set_top_line("xsave macro file name: ")
+		filename = delete_trailing_white(key_gets("", macro_file_history))
+		if length(filename) != 0 then
+			macro_file_history = update_history(macro_file_history, filename)
+			fn = open(filename, "w")
+			if fn = -1 then
+				set_top_line("File does not exist")
+				getc(0) -- make the user press Enter.
+			else
+				pretty_print(fn, CUSTOM_KEYSTROKES, {3})
+				close(fn)
+				set_top_line("Write success")
+			end if
+		end if
+		
+	elsif command[1] = 'l' then
+		set_top_line("load macro file name: ")
+		filename = delete_trailing_white(key_gets("", macro_file_history))
+		if length(filename) != 0 then
+			macro_file_history = update_history(macro_file_history, filename)
+			if atom(dir(filename)) then
+				set_top_line("File does not exist")
+				getc(0) -- make the user press Enter.
+			else
+				fn = open(MACRO_FILE, "w")
+				if fn = -1 then
+					set_top_line("File does not exist")
+					getc(0) -- make the user press Enter.
+				else
+					pretty_print(fn, CUSTOM_KEYSTROKES, {3})
+					close(fn)
+					set_top_line("Write success")
+				end if
+				fn = open(filename, "r")
+				if fn = -1 then
+					set_top_line("File does not exist")
+					getc(0) -- make the user press Enter.
+				else
+					tmp = get(fn)
+					close(fn)
+					if tmp[1] = GET_SUCCESS and sequence(tmp[2]) then
+						CUSTOM_KEYSTROKES = tmp[2]
+						set_top_line("Load success")
+					else
+						set_top_line("Unable to load file")
+						getc(0) -- make the user press Enter.
+					end if
+				end if
+				
+			end if
+		end if
+		
+	elsif command[1] >= '0' and command[1] <= '9' then
+		
+		-- change current macro
+		puts(1, command[1])
+		macro = numeric({command[1]})
+		
+		command = key_gets("1234567890", {}, FALSE) & ' '
+		puts(1, command[1])
+		macro *= 10
+		macro += numeric({command[1]})
+		
+		command = key_gets("1234567890", {}, FALSE) & ' '
+		--puts(1, command[1])
+		macro *= 10
+		macro += numeric({command[1]})
+		macro += 1
+		
+		--get_macro_menu()
+		
+	elsif command[1] = 'v' then
+		-- view macros
+		--example:  ESCAPE,'f',CR,ARROW_RIGHT,BS,'e',ARROW_LEFT
+		
+		integer f, key
+		sequence pos
+		
+		bk_color(BLACK)
+		text_color(WHITE)
+		clear_screen()
+		--for i = 1 to length(CUSTOM_KEYSTROKES) do
+			
+			printf(1, "Macro #%d: ", {macro - 1})
+			
+			for j = 1 to length(CUSTOM_KEYSTROKES[macro]) do
+				key = CUSTOM_KEYSTROKES[macro][j]
+				f = find(key, ids)
+				if f then
+					puts(1, names[f])
+				elsif key >= 32 and key <= 126 then
+				--elsif key >= SAFE_CHAR and key <= 126 then
+					puts(1, "\'" & key & "\'")
+				else
+					print(1, key)
+				end if
+				if j != length(CUSTOM_KEYSTROKES[macro]) then
+					puts(1, ",")
+				end if
+				pos = get_position()
+				if pos[2] + 20 > config[VC_COLUMNS] then -- max: 20 characters
+					puts(1, "\n")
+				end if
+			end for
+			--if length(CUSTOM_KEYSTROKES[macro]) then
+				--pretty_print(1, CUSTOM_KEYSTROKES[macro], {3})
+				-- --print(1, CUSTOM_KEYSTROKES[macro])
+			--end if
+			puts(1, "\n")
+		--end for
+		wait_key()
+		
+		normal_video()
+		while get_key() != -1 do
+			-- clear the keyboard buffer
+		end while
+		refresh_all_windows()
+		
+		normal_video()
+		goto_line(0, b_col) -- refresh screen
+		
+		--get_macro_menu()
+		
+	else
+		set_top_line("")
+		if length(buffer) = 0 then
+			puts(SCREEN, "empty buffer")
+		else
+			printf(SCREEN, "%s line %d of %d, column %d of %d, ",
+					   {file_name, b_line, length(buffer), s_col,
+						length(expand_tabs(edit_tab_width, buffer[b_line]))-1})
+			if modified then
+				puts(SCREEN, "modified")
+			else
+				puts(SCREEN, "not modified")
+			end if
+		end if
+		exit
+	end if
+
+end while
+
 end procedure
 
 procedure get_escape(boolean help)
@@ -1935,7 +2051,7 @@ procedure get_escape(boolean help)
 	if help then
 		command = "h"
 	else
-		first_bold("j")
+		first_bold("jmod ") -- jjc
 		first_bold("help ")
 		first_bold("clone ")
 		first_bold("quit ")
@@ -1952,12 +2068,15 @@ procedure get_escape(boolean help)
 		first_bold("mods ")
 		text_color(TOP_LINE_TEXT_COLOR)
 		puts(SCREEN, "ddd CR: ")
-		command = key_gets("jhcqswnedfrlm", {}) & ' '
+		command = key_gets("jhcqswnedfrlm", {}) & ' ' -- jjc
 	end if
 
-	if command[1] = 'j' then
-		ed_macro_menu()
-
+	if command[1] = 'j' then -- jjc
+		if recording_macro then
+			macro_buffer = macro_buffer[1..$-2]
+		end if
+		get_macro_menu()
+	
 	elsif command[1] = 'f' then
 		replacing = FALSE
 		searching = search(FALSE)
@@ -2070,6 +2189,7 @@ procedure get_escape(boolean help)
 		else    
 			self_command &= SLASH & "docs"
 			if help then
+				--trace(1)
 				set_top_line(
 				"That key does nothing - do you want to view the help text? ")
 				answer = key_gets("yn", {}) & ' '
@@ -2380,7 +2500,7 @@ procedure edit_file()
 
 	while not stop do
 
-		key = next_key()
+		key = next_key() --bookmark--
 		if key = CONTROL_C then
 			refresh_all_windows()
 			goto_line(0, b_col)
@@ -2388,14 +2508,15 @@ procedure edit_file()
 		
 		if good(key) then
 			-- normal key
-			
-		    if recording_macro = 1 then
-	          	if key != CUSTOM_KEY then
-	            	macro &= {key}
-	         	end if
-		    end if
+			if recording_macro then -- jjc
+				--trace(1)
+				macro_buffer &= {key}
+			end if
 			if key = CUSTOM_KEY then
-				add_queue(CUSTOM_KEYSTROKES)
+				if recording_macro then
+					macro_buffer = macro_buffer[1..$-1]
+				end if
+				add_queue(CUSTOM_KEYSTROKES[macro])
 
 			elsif find(key, window_swap_keys) then
 				integer next_window = find(key, window_swap_keys)
