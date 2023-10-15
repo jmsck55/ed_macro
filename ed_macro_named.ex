@@ -396,6 +396,8 @@ constant ACCENT = 0  -- Set to 1 enables read accented characters from
 -------- END OF USER-MODIFIABLE PARAMETERS ------------------------------------
 
 -- begin jjc:
+constant APPEND_MIN_SIZE = 30
+
 integer first_time = TRUE
 
 function get_CUSTOM_KEYSTROKES(sequence key)
@@ -2396,7 +2398,7 @@ procedure save_file(sequence save_name, integer keep = TRUE) -- jjc
 	file_number file_no
 	--boolean strip_cr
 	sequence line, tmp, s
-	integer found
+	integer found, pos
 	object ch
 	-- begin jjc:
 	set_top_line("")
@@ -2408,35 +2410,44 @@ procedure save_file(sequence save_name, integer keep = TRUE) -- jjc
 		return
 	end if
 	printf(SCREEN, "saving %s ... ", {save_name})
+	start_line = 0
+	start_col = 1
 	for i = 1 to length_buffer do
-		if keep then
+		--if keep then
 			line = buffer_at(i) -- index (i)
-		else
-			line = buffer_at(1) -- one (1)
-			buffer_delete_node_at(1) -- one (1)
-		end if
-		
+		--else
+		--	line = buffer_at(1) -- one (1)
+		--	buffer_delete_node_at(1) -- one (1)
+		--end if
 		line = line[1..$-1]
 		s = {}
+		pos = 1
 		while length(line) do
 			ch = line[1]
 			line = line[2..$]
+			start_col = pos
+			pos += 1
 			if ch = '\\' then
 				-- jjc
 				ch = line[1]
 				line = line[2..$]
+				start_col = pos
+				pos += 1
 				if ch = 'x' then
 					tmp = value("#" & line[1..2])
-					if tmp[1] = GET_SUCCESS then
-						if atom(tmp[2]) then
-							ch = tmp[2]
-							line = line[3..$]
-						end if
+					if tmp[1] = GET_SUCCESS and atom(tmp[2]) then
+						ch = tmp[2]
+						line = line[3..$]
+						start_col = pos
+						pos += 2
+					else
+						start_line = i
+						exit
 					end if
 				else
-					found = find(ch, ESCAPE_CHARS)
+					found = find(ch, ESCAPE_CHARS) -- "escape"
 					if found then
-						ch = ESCAPED_CHARS[found]
+						ch = ESCAPED_CHARS[found] -- "escaped"
 					end if
 				end if
 			elsif ch = CONTROL_CHAR then
@@ -2447,16 +2458,27 @@ procedure save_file(sequence save_name, integer keep = TRUE) -- jjc
 					else
 						tmp = hex_to_bytes(line[1..found-1])
 					end if
-					if tmp[1] = GET_SUCCESS then
-						if is_bytes(tmp[2]) then
-							ch = tmp[2]
-							line = line[found+1..$]
-						end if
+					if tmp[1] = GET_SUCCESS and is_bytes(tmp[2]) then
+						ch = tmp[2]
+						line = line[found+1..$]
+						start_col = pos
+						pos += found
+					else
+						start_line = i
+						exit
 					end if
 				end if
 			end if
-			s = s & ch
+			if length(s) < APPEND_MIN_SIZE then
+				s = s & ch
+			else
+				s = append(s, ch)
+			end if
 		end while
+		if start_line then
+			-- s = s & line
+			exit
+		end if
 -- 		if cr_removed and not strip_cr then
 -- 			-- He wants CR's - put them back.
 -- 			-- All lines have \n at the end.
@@ -2467,14 +2489,27 @@ procedure save_file(sequence save_name, integer keep = TRUE) -- jjc
 		puts(file_no, convert_tabs(edit_tab_width, STANDARD_TAB_WIDTH, s))
 	end for
 	close(file_no)
--- 	if not strip_cr then
--- 		-- the file doesn't have CR's
--- 		cr_removed = FALSE -- no longer binary
--- 	end if
+	-- 	if not strip_cr then
+	-- 		-- the file doesn't have CR's
+	-- 		cr_removed = FALSE -- no longer binary
+	-- 	end if
+	if start_line then --here, done.
+		-- keep = TRUE
+		error_message = sprintf("save error, line=%d, col=%d, try: \\xff hex format")
+		goto_line(start_line, 1)
+		set_err_pointer()
+		show_message()
+	else
+		if keep = FALSE then
+			for i = 1 to length_buffer do
+				buffer_delete_node_at(1) -- fastest to start at one (1).
+			end for
+		end if
+		puts(SCREEN, "ok")
+	end if
 	-- end jjc.
-	puts(SCREEN, "ok")
 	if equal(save_name, file_name) then
-		clear_modified()
+		clear_modified() -- modified equals false
 	end if
 	stop = TRUE
 end procedure
@@ -3467,7 +3502,11 @@ procedure edit_file()
 					-- ignore
 			elsif length(recording_macro) then -- jjc
 				-- trace(1)
-				macro_buffer &= {key}
+				if length(macro_buffer) < APPEND_MIN_SIZE then
+					macro_buffer = macro_buffer & key
+				else
+					macro_buffer = append(macro_buffer, key)
+				end if
 			end if
 			if key = CUSTOM_KEY then
 				if length(recording_macro) then
