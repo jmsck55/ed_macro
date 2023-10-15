@@ -2982,6 +2982,8 @@ procedure get_escape(boolean help)
 		if command[1] = GET_SUCCESS then
 			command = command[2]
 			if length(command) <= 1 then -- will not be zero.
+				normal_video()
+				set_modified()
 				insert_string(sprintf("\\x%02X", command)) -- command length is one (1).
 				return
 			elsif length(command[2]) <= 4 then
