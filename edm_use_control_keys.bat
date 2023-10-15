@@ -15,4 +15,4 @@ rem limitations under the License.
 rem 
 rem ------------------------------------------------------------------------------
 rem 
-eui ed_macro_named.ex -d USE_CONTROL_KEYS %1 %2 %3 %4 %5 %6 %7 %8 %9
+eui -d USE_CONTROL_KEYS ed_macro_named.ex %1 %2 %3 %4 %5 %6 %7 %8 %9

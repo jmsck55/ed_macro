@@ -15,4 +15,4 @@ rem limitations under the License.
 rem 
 rem ------------------------------------------------------------------------------
 rem 
-eui edx_macro.ex %*
+eui edx_macro.ex %1 %2 %3 %4 %5 %6 %7 %8 %9

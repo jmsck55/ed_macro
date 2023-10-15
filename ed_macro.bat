@@ -15,5 +15,4 @@ rem limitations under the License.
 rem 
 rem ------------------------------------------------------------------------------
 rem 
-rem "edm.bat" is the short name for ed_macro_named.ex, using control keys.
-eui -d USE_CONTROL_KEYS ed_macro_named.ex %1 %2 %3 %4 %5 %6 %7 %8 %9
+eui ed_macro.ex %1 %2 %3 %4 %5 %6 %7 %8 %9
