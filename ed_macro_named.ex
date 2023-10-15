@@ -245,7 +245,7 @@ end ifdef
 	NUM_PAD_SLASH = -999  -- Please check on console and Xterm
 	ignore_keys = {}
 elsifdef WINDOWS then
-object kc
+	object kc
 
 	kc = key_codes()
 	
@@ -1559,7 +1559,7 @@ function hex_to_bytes(sequence string)
 	sequence bytes
 	-- trace(1)
 	bytes = {}
-	if and_bits(length(string), 1) then
+	if length(string) = 0 or and_bits(length(string), 1) then
 		return {GET_EOF, bytes}
 	end if
 	for h = 2 to length(string) by 2 do
@@ -2913,7 +2913,7 @@ procedure get_escape(boolean help)
 		first_bold("view ") -- jjc
 		text_color(TOP_LINE_TEXT_COLOR)
 		--puts(SCREEN, "ddd CR: ")
-		command = key_gets("vpbjhcqswnedfrlm", {}) & ' ' -- jjc (pbj: peanut butter and jelly -- just for fun)
+		command = key_gets("vpbjhcqswnedfrlm", {}) & ' ' -- jjc
 	end if
 
 	if command[1] = 'v' then -- view line
@@ -2973,10 +2973,34 @@ procedure get_escape(boolean help)
 		
 	elsif command[1] = 'b' then -- jjc
 		set_top_line("insert binary hex string: 0x")
-		answer = key_gets("", {}, TRUE)
+		answer = key_gets("", {})
+		-- inserting a sequence of chars
+		if and_bits(length(answer), 1) then
+			answer = '0' & answer
+		end if
+		command = hex_to_bytes(answer)
+		if command[1] = GET_SUCCESS then
+			command = command[2]
+			if length(command) <= 1 then -- will not be zero.
+				insert_string(sprintf("\\x%02X", command)) -- command length is one (1).
+				return
+			elsif length(command[2]) <= 4 then
+				answer = "{"
+				set_top_line("little endian [reversed]? ")
+				if find('y', key_gets("yn", {})) then
+					for i = length(command) to 1 by -1 do
+						answer = answer & sprintf("#%02x,", {command[i]})
+					end for
+				else
+					for i = 1 to length(command) do
+						answer = answer & sprintf("#%02x,", {command[i]})
+					end for
+				end if
+				answer[$] = '}'
+			end if
+		end if
 		normal_video()
 		set_modified()
-		-- inserting a sequence of chars
 		insert_string(CONTROL_CHAR & answer & CONTROL_CHAR)
 		return
 
