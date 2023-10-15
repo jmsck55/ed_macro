@@ -116,7 +116,6 @@ include std/io.e -- jjc
 include std/machine.e -- jjc
 include std/math.e -- jjc
 include std/pretty.e -- jjc
-include std/types.e -- jjc
 
 --with trace
 
@@ -1559,9 +1558,6 @@ function hex_to_bytes(sequence string)
 	sequence bytes
 	-- trace(1)
 	bytes = {}
-	if and_bits(length(string), 1) then
-		return {GET_EOF, bytes}
-	end if
 	for h = 2 to length(string) by 2 do
 		n = 0
 		for i = h - 1 to h do
@@ -2433,26 +2429,13 @@ procedure save_file(sequence save_name, integer keep = TRUE) -- jjc
 			pos += 1
 			if ch = '\\' then
 				-- jjc
-				if length(line) = 0 then
-					start_line = i
-					exit
-				end if
 				ch = line[1]
 				line = line[2..$]
 				start_col = pos
 				pos += 1
 				if ch = 'x' then
-					if length(line) < 2 then
-						start_line = i
-						exit
-					end if
-					tmp = upper(line[1..2])
-					if not t_xdigit(tmp) then
-						start_line = i
-						exit
-					end if
-					tmp = value("#" & tmp)
-					if tmp[1] = GET_SUCCESS and integer(tmp[2]) and i <= 255 and i >= 0 then -- characers are from 0 to 255
+					tmp = value("#" & line[1..2])
+					if tmp[1] = GET_SUCCESS and atom(tmp[2]) then
 						ch = tmp[2]
 						line = line[3..$]
 						start_col = pos
@@ -2470,10 +2453,6 @@ procedure save_file(sequence save_name, integer keep = TRUE) -- jjc
 			elsif ch = CONTROL_CHAR then
 				found = find(CONTROL_CHAR, line)
 				if found then
-					if length(line) < 2 then
-						start_line = i
-						exit
-					end if
 					if line[1] = '{' or line[1] = '\"' then
 						tmp = value(line[1..found-1])
 					else
@@ -2516,7 +2495,7 @@ procedure save_file(sequence save_name, integer keep = TRUE) -- jjc
 	-- 	end if
 	if start_line then --here, done.
 		-- keep = TRUE
-		error_message = sprintf("save error, line=%d, col=%d, try: \\xff hex format, or use: ESC b", {start_line, start_col})
+		error_message = sprintf("save error, line=%d, col=%d, try: \\xff hex format")
 		goto_line(start_line, 1)
 		set_err_pointer()
 		show_message()
@@ -2714,7 +2693,7 @@ while 1 do
 					end for
 					
 					close(fn)
-					set_top_line("done")
+					set_top_line("Write success")
 				end if
 				--else
 					--pretty_print(fn, CUSTOM_KEYSTROKES, {3})
