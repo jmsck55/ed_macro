@@ -2979,7 +2979,7 @@ procedure get_escape(boolean help)
 		
 		
 	elsif command[1] = 'b' then -- jjc
-		set_top_line("insert binary hex string: 0x")
+		set_top_line("insert hexadecimal: 0x")
 		command = key_gets("", {})
 		-- inserting a sequence of chars
 		answer = CONTROL_CHAR & command & CONTROL_CHAR -- default
