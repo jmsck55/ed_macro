@@ -1556,11 +1556,18 @@ end function
 function hex_to_bytes(sequence string)
 -- convert digit string to an integer
 	atom n
+	integer status
 	sequence bytes
 	-- trace(1)
 	bytes = {}
-	if length(string) = 0 or and_bits(length(string), 1) then
-		return {GET_EOF, bytes}
+	if length(string) = 0 then
+		return {GET_NOTHING, bytes}
+	end if
+	if and_bits(length(string), 1) then
+		string = '0' & string
+		status = GET_EOF
+	else
+		status = GET_SUCCESS
 	end if
 	for h = 2 to length(string) by 2 do
 		n = 0
@@ -1581,7 +1588,7 @@ function hex_to_bytes(sequence string)
 		end for
 		bytes = bytes & {n}
 	end for
-	return {GET_SUCCESS, bytes}
+	return {status, bytes}
 end function
 
 
@@ -2995,9 +3002,11 @@ procedure get_escape(boolean help)
 				answer[$] = CONTROL_CHAR
 			end if
 		else
-			set_top_line("Error in binary hex string.")
-			if and_bits(length(answer), 1) then
-				puts(SCREEN, "  String length has to be even (divisible by two).")
+			set_top_line("Warning, ")
+			if command[1] = GET_EOF then
+				puts(SCREEN, "length of hex string is not even (divisible by two).")
+			else
+				puts(SCREEN, "you may have to edit between block characters.")
 			end if
 		end if
 		normal_video()
