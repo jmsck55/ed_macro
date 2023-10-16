@@ -2973,37 +2973,33 @@ procedure get_escape(boolean help)
 		
 	elsif command[1] = 'b' then -- jjc
 		set_top_line("insert binary hex string: 0x")
-		answer = key_gets("", {})
+		command = key_gets("", {})
 		-- inserting a sequence of chars
-		if and_bits(length(answer), 1) then
-			answer = '0' & answer
+		answer = CONTROL_CHAR & command & CONTROL_CHAR -- default
+		if and_bits(length(command), 1) then
+			command = '0' & command
 		end if
-		command = hex_to_bytes(answer)
-		if command[1] = GET_SUCCESS then
-			command = command[2]
-			if length(command) <= 1 then -- will not be zero.
-				normal_video()
-				set_modified()
-				insert_string(sprintf("\\x%02X", command)) -- command length is one (1).
-				return
-			elsif length(command[2]) <= 4 then
-				answer = "{"
-				set_top_line("little endian [reversed]? ")
+		command = hex_to_bytes(command)
+		if command[1] = GET_SUCCESS then -- special cases
+			if length(command[2]) = 1 then -- will not be zero.
+				answer = sprintf("\\x%02X", command[2]) -- command[2] length is one (1).
+			elsif length(command[2]) <= 8 then
+				command = command[2]
+				set_top_line("little endian [reversed: 0x12345678 to {#78,#56,#34,#12}]? ")
 				if find('y', key_gets("yn", {})) then
-					for i = length(command) to 1 by -1 do
-						answer = answer & sprintf("#%02x,", {command[i]})
-					end for
-				else
-					for i = 1 to length(command) do
-						answer = answer & sprintf("#%02x,", {command[i]})
-					end for
+					command = reverse(command)
 				end if
-				answer[$] = '}'
+				answer = CONTROL_CHAR & "{"
+				for i = 1 to length(command) do
+					answer = answer & sprintf("#%02x, ", {command[i]})
+				end for
+				answer[$-1] = '}'
+				answer[$] = CONTROL_CHAR
 			end if
 		end if
 		normal_video()
 		set_modified()
-		insert_string(CONTROL_CHAR & answer & CONTROL_CHAR)
+		insert_string(answer)
 		return
 
 	elsif command[1] = 'j' then -- jjc
