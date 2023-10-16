@@ -2983,9 +2983,9 @@ procedure get_escape(boolean help)
 		if command[1] = GET_SUCCESS then -- special cases
 			if length(command[2]) = 1 then -- will not be zero.
 				answer = sprintf("\\x%02x", command[2]) -- command[2] length is one (1).
-			elsif length(command[2]) <= 8 then
+			elsif length(command[2]) <= 16 then
 				command = command[2]
-				set_top_line("little endian [reversed: 0x12345678 to {#78,#56,#34,#12}]? ")
+				set_top_line("little endian [reversed: 0xabcd to {#cd, #ab]? ")
 				if find('y', key_gets("yn", {})) then
 					command = reverse(command)
 				end if
