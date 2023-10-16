@@ -3006,7 +3006,7 @@ procedure get_escape(boolean help)
 			if command[1] = GET_EOF then
 				puts(SCREEN, "length of hex string is not even (divisible by two).")
 			else
-				puts(SCREEN, "you may have to edit between block characters.")
+				puts(SCREEN, "you may need to edit between block characters.")
 			end if
 		end if
 		normal_video()
