@@ -2982,7 +2982,7 @@ procedure get_escape(boolean help)
 		command = hex_to_bytes(command)
 		if command[1] = GET_SUCCESS then -- special cases
 			if length(command[2]) = 1 then -- will not be zero.
-				answer = sprintf("\\x%02X", command[2]) -- command[2] length is one (1).
+				answer = sprintf("\\x%02x", command[2]) -- command[2] length is one (1).
 			elsif length(command[2]) <= 8 then
 				command = command[2]
 				set_top_line("little endian [reversed: 0x12345678 to {#78,#56,#34,#12}]? ")
