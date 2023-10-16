@@ -2976,9 +2976,6 @@ procedure get_escape(boolean help)
 		command = key_gets("", {})
 		-- inserting a sequence of chars
 		answer = CONTROL_CHAR & command & CONTROL_CHAR -- default
-		if and_bits(length(command), 1) then
-			command = '0' & command
-		end if
 		command = hex_to_bytes(command)
 		if command[1] = GET_SUCCESS then -- special cases
 			if length(command[2]) = 1 then -- will not be zero.
@@ -2996,6 +2993,11 @@ procedure get_escape(boolean help)
 				end for
 				answer[$-1] = '}'
 				answer[$] = CONTROL_CHAR
+			end if
+		else
+			set_top_line("Error in binary hex string.")
+			if and_bits(length(answer), 1) then
+				puts(SCREEN, "  String length has to be even (divisible by two).")
 			end if
 		end if
 		normal_video()
