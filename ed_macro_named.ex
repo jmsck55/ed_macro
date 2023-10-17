@@ -2459,7 +2459,7 @@ procedure save_file(sequence save_name, integer keep = TRUE) -- jjc
 						exit
 					end if
 					tmp = value("#" & tmp)
-					if tmp[1] = GET_SUCCESS and integer(tmp[2]) and i <= 255 and i >= 0 then -- characers are from 0 to 255
+					if tmp[1] = GET_SUCCESS and integer(tmp[2]) and tmp[2] <= 255 and tmp[2] >= 0 then -- characers are from 0 to 255
 						ch = tmp[2]
 						line = line[3..$]
 						start_col = pos
