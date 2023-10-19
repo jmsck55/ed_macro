@@ -2525,9 +2525,9 @@ procedure save_file(sequence save_name, integer keep = TRUE) -- jjc
 	-- 		-- the file doesn't have CR's
 	-- 		cr_removed = FALSE -- no longer binary
 	-- 	end if
-	if start_line then --here, done.
+	if start_line then -- done.
 		if keep = FALSE then
-			-- load back what was written.
+			-- load back what was written, into the memory buffer
 			object ob
 			buffer_insert_nodes_at(1, {last_line})
 			file_no = open(save_name, "rb")
@@ -2538,7 +2538,7 @@ procedure save_file(sequence save_name, integer keep = TRUE) -- jjc
 				return
 			end if
 			while 1 do
-				ob = add_line(file_no, TRUE)
+				ob = add_line(file_no, TRUE) -- TRUE for string return value.
 				if atom(ob) then
 					exit
 				end if
@@ -2547,9 +2547,9 @@ procedure save_file(sequence save_name, integer keep = TRUE) -- jjc
 			close(file_no)
 		end if
 		error_message = sprintf("save error, line=%d, col=%d, try: \\xff hex format", {start_line, start_col})
+		show_message()
 		goto_line(start_line, 1)
 		set_err_pointer()
-		show_message()
 		stop = FALSE
 		return
 	else
@@ -3079,12 +3079,14 @@ procedure get_escape(boolean help)
 				end if
 			end while
 		end if
-		save_state()
-		set_top_line("new file name: ")
-		answer = delete_trailing_white(key_gets("", file_history))
-		if length(answer) != 0 then
-			file_name = answer
-			stop = TRUE
+		if stop then
+			save_state()
+			set_top_line("new file name: ")
+			answer = delete_trailing_white(key_gets("", file_history))
+			if length(answer) != 0 then
+				file_name = answer
+				stop = TRUE
+			end if
 		end if
 
 	elsif command[1] = 'w' then
@@ -3100,6 +3102,10 @@ procedure get_escape(boolean help)
 	elsif command[1] = 'e' and dot_e then
 		if modified then
 			save_file(file_name)
+			if stop = FALSE then
+				normal_video()
+				return
+			end if
 			stop = FALSE
 		end if
 		-- execute the current file & return
