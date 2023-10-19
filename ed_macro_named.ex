@@ -2537,12 +2537,14 @@ procedure save_file(sequence save_name, integer keep = TRUE) -- jjc
 				stop = FALSE
 				return
 			end if
+			pos = 1
 			while 1 do
 				ob = add_line(file_no, TRUE) -- TRUE for string return value.
 				if atom(ob) then
 					exit
 				end if
-				buffer_insert_nodes_at(1, {ob})
+				buffer_insert_nodes_at(pos, {ob})
+				pos += 1
 			end while
 			close(file_no)
 		end if
