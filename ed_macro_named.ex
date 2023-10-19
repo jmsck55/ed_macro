@@ -709,13 +709,13 @@ procedure buffer_insert_nodes_at(integer line_n, sequence lines)
 	end if
 	if line_n - 1 = length_buffer then
 		-- append lines at end of buffer
-		for i = 1 to length(lines) do
+		--for i = 1 to length(lines) do
 		-- In Euphoria, length(lines) is set once, at the beginning of the "for loop"
-		--while length(lines) do
+		while length(lines) do
 			buffer_append(lines[1]) -- subscript is the number one (1)
 			lines = lines[2..$] -- faster to truncate large sequences
-		--end while
-		end for
+		end while
+		--end for
 		return
 	end if
 	buffer_seek(line_n)
@@ -1219,13 +1219,13 @@ end function
 
 sequence chunk
 
-function add_line(file_number file_no)
+function add_line(file_number file_no, integer returnLine = FALSE)
 -- add a new line to the buffer
 	integer f, len, ch
 	sequence line, tmp
 
 	-- begin jjc:
-	len = (-1)
+	len = -(1)
 	if length(line_ending[1]) then
 		ch = line_ending[1][$]
 		while 1 do
@@ -1261,7 +1261,9 @@ function add_line(file_number file_no)
 	end if
 
 	--line = gets(file_no) -- jjc
-	
+	if returnLine then
+		return line
+	end if
 	-- trace(1)
 	buffer_append(line)
 	--buffer = append(buffer, line)
@@ -2042,7 +2044,7 @@ function key_gets(sequence hot_keys, sequence history, integer macro_record = TR
 		end if
 		if length(recording_macro) and macro_record then -- jjc
 			-- trace(1)
-			macro_buffer &= {char}
+			macro_buffer &= char
 		end if
 		
 		if char = CR or char = 10 then
@@ -2408,7 +2410,7 @@ procedure save_file(sequence save_name, integer keep = TRUE) -- jjc
 -- write buffer to the disk file
 	file_number file_no
 	--boolean strip_cr
-	sequence line, tmp, s
+	sequence line, tmp, s, last_line
 	integer found, pos
 	object ch
 	-- begin jjc:
@@ -2424,12 +2426,13 @@ procedure save_file(sequence save_name, integer keep = TRUE) -- jjc
 	start_line = 0
 	start_col = 1
 	for i = 1 to length_buffer do
-		--if keep then
+		if keep then
 			line = buffer_at(i) -- index (i)
-		--else
-		--	line = buffer_at(1) -- one (1)
-		--	buffer_delete_node_at(1) -- one (1)
-		--end if
+		else
+			line = buffer_at(1) -- one (1)
+			buffer_delete_node_at(1) -- one (1)
+			last_line = line
+		end if
 		line = line[1..$-1]
 		s = {}
 		pos = 1
@@ -2459,7 +2462,8 @@ procedure save_file(sequence save_name, integer keep = TRUE) -- jjc
 						exit
 					end if
 					tmp = value("#" & tmp)
-					if tmp[1] = GET_SUCCESS and integer(tmp[2]) and tmp[2] <= 255 and tmp[2] >= 0 then -- characers are from 0 to 255
+					if tmp[1] = GET_SUCCESS and integer(tmp[2])
+						 and tmp[2] <= 255 and tmp[2] >= 0 then -- characers are from 0 to 255
 						ch = tmp[2]
 						line = line[3..$]
 						start_col = pos
@@ -2522,17 +2526,38 @@ procedure save_file(sequence save_name, integer keep = TRUE) -- jjc
 	-- 		cr_removed = FALSE -- no longer binary
 	-- 	end if
 	if start_line then --here, done.
-		-- keep = TRUE
-		error_message = sprintf("save error, line=%d, col=%d, try: \\xff hex format, or use: ESC b", {start_line, start_col})
+		if keep = FALSE then
+			-- load back what was written.
+			object ob
+			buffer_insert_nodes_at(1, {last_line})
+			file_no = open(save_name, "rb")
+			if file_no = -1 then
+				printf(SCREEN, "Can't open %s - read permission denied", 
+					  {save_name})
+				stop = FALSE
+				return
+			end if
+			while 1 do
+				ob = add_line(file_no, TRUE)
+				if atom(ob) then
+					exit
+				end if
+				buffer_insert_nodes_at(1, {ob})
+			end while
+			close(file_no)
+		end if
+		error_message = sprintf("save error, line=%d, col=%d, try: \\xff hex format", {start_line, start_col})
 		goto_line(start_line, 1)
 		set_err_pointer()
 		show_message()
+		stop = FALSE
+		return
 	else
-		if keep = FALSE then
-			for i = 1 to length_buffer do
-				buffer_delete_node_at(1) -- fastest to start at one (1).
-			end for
-		end if
+	--	if keep = FALSE then
+	--		for i = 1 to length_buffer do
+	--			buffer_delete_node_at(1) -- fastest to start at one (1).
+	--		end for
+	--	end if
 		puts(SCREEN, "ok")
 	end if
 	-- end jjc.
@@ -2988,9 +3013,8 @@ procedure get_escape(boolean help)
 			if length(command[2]) = 1 then -- will not be zero.
 				answer = sprintf("\\x%02x", command[2]) -- command[2] length is one (1).
 			else
-			-- elsif length(command[2]) <= 32 then
 				command = command[2]
-				set_top_line("little endian [reversed: 0xabcd to {#cd, #ab]? ")
+				set_top_line("little endian [reversed: 0xabcd to {#cd, #ab}]? ")
 				if find('y', key_gets("yn", {})) then
 					command = reverse(command)
 				end if
@@ -3558,7 +3582,7 @@ procedure edit_file()
 			elsif length(recording_macro) then -- jjc
 				-- trace(1)
 				if length(macro_buffer) < APPEND_MIN_SIZE then
-					macro_buffer = macro_buffer & key
+					macro_buffer &= key
 				else
 					macro_buffer = append(macro_buffer, key)
 				end if
