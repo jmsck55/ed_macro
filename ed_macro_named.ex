@@ -1218,6 +1218,7 @@ function clean(sequence line)
 end function
 
 sequence chunk
+chunk = {}
 
 function add_line(file_number file_no, integer returnLine = FALSE)
 -- add a new line to the buffer
@@ -1239,7 +1240,7 @@ function add_line(file_number file_no, integer returnLine = FALSE)
 			elsif len then
 				tmp = get_bytes(file_no, 100) -- has to be 100 for speed with find()
 				len = length(tmp)
-				chunk = chunk & tmp
+				chunk &= tmp
 			else
 				line = chunk
 				chunk = {}
@@ -1295,7 +1296,8 @@ procedure read_file(file_number file_no)
 	-- read the rest
 	while add_line(file_no) do
 	end while
-	
+	chunk = {}
+
 end procedure
 
 procedure set_top_line(sequence message)
@@ -2405,7 +2407,6 @@ function last_use()
 	return TRUE
 end function
 
-
 procedure save_file(sequence save_name, integer keep = TRUE) -- jjc
 -- write buffer to the disk file
 	file_number file_no
@@ -2414,6 +2415,14 @@ procedure save_file(sequence save_name, integer keep = TRUE) -- jjc
 	integer found, pos
 	object ch
 	-- begin jjc:
+	if file_exists(save_name) then
+		set_top_line(sprintf("Backup %s to %s.bak? ", {save_name, save_name}))
+		if find('y', key_gets("yn", {})) then
+			if copy_file(save_name, save_name & ".bak", 1) then
+				puts(SCREEN, " ... ok")
+			end if
+		end if
+	end if
 	set_top_line("")
 	file_no = open(save_name, "wb")
 	if file_no = -1 then
@@ -2439,8 +2448,8 @@ procedure save_file(sequence save_name, integer keep = TRUE) -- jjc
 		while length(line) do
 			ch = line[1]
 			line = line[2..$]
-			start_col = pos
 			pos += 1
+			start_col = pos
 			if ch = '\\' then
 				-- jjc
 				if length(line) = 0 then
@@ -2449,8 +2458,8 @@ procedure save_file(sequence save_name, integer keep = TRUE) -- jjc
 				end if
 				ch = line[1]
 				line = line[2..$]
-				start_col = pos
 				pos += 1
+				start_col = pos
 				if ch = 'x' then
 					if length(line) < 2 then
 						start_line = i
@@ -2466,8 +2475,8 @@ procedure save_file(sequence save_name, integer keep = TRUE) -- jjc
 						 and tmp[2] <= 255 and tmp[2] >= 0 then -- characers are from 0 to 255
 						ch = tmp[2]
 						line = line[3..$]
-						start_col = pos
 						pos += 2
+						start_col = pos
 					else
 						start_line = i
 						exit
@@ -2493,8 +2502,8 @@ procedure save_file(sequence save_name, integer keep = TRUE) -- jjc
 					if tmp[1] = GET_SUCCESS and is_bytes(tmp[2]) then
 						ch = tmp[2]
 						line = line[found+1..$]
-						start_col = pos
 						pos += found
+						start_col = pos
 					else
 						start_line = i
 						exit
@@ -2526,8 +2535,11 @@ procedure save_file(sequence save_name, integer keep = TRUE) -- jjc
 	-- 		cr_removed = FALSE -- no longer binary
 	-- 	end if
 	if start_line then -- done.
+		-- there was a format error in a hexidecimal number.
+		-- restore the state of the editor, and display the error.
 		if keep = FALSE then
 			-- load back what was written, into the memory buffer
+			-- wait until this procedure is finished.
 			object ob
 			buffer_insert_nodes_at(1, {last_line})
 			file_no = open(save_name, "rb")
@@ -2538,6 +2550,7 @@ procedure save_file(sequence save_name, integer keep = TRUE) -- jjc
 				return
 			end if
 			pos = 1
+			chunk = {}
 			while 1 do
 				ob = add_line(file_no, TRUE) -- TRUE for string return value.
 				if atom(ob) then
@@ -2546,6 +2559,7 @@ procedure save_file(sequence save_name, integer keep = TRUE) -- jjc
 				buffer_insert_nodes_at(pos, {ob})
 				pos += 1
 			end while
+			chunk = {}
 			close(file_no)
 		end if
 		error_message = sprintf("save error, line=%d, col=%d, try: \\xff hex format", {start_line, start_col})
@@ -3068,6 +3082,7 @@ procedure get_escape(boolean help)
 		clone_window()
 		
 	elsif command[1] = 'n' then
+		stop = TRUE
 		if modified and last_use() then
 			while TRUE do
 				set_top_line("")
@@ -3087,7 +3102,7 @@ procedure get_escape(boolean help)
 			answer = delete_trailing_white(key_gets("", file_history))
 			if length(answer) != 0 then
 				file_name = answer
-				stop = TRUE
+				-- stop = TRUE
 			end if
 		end if
 
