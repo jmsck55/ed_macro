@@ -16,18 +16,6 @@
 -- ed_macro_mod, a recordable macro version of ed.ex
 -- This is the original ed_macro.ex
 ------------------------------------------------------------------------------
-
--- 1000 macros for business purposes.
-
--- New: added more macros (100 macros)
--- Fixed Linux features
--- New feature: save and load macros (to be completed)
-
--- ED.EX from Euphoria v4.0.5 modified for recordable macros.
---  Current features are: 10 programmable macros -- ESC, j -- accesses the macro menu,
---  view/record/stop-record/select-current-macro from the macro menu,
---  F12 plays the current macro.
-
 		----------------------------------------------------------
 		--       This Euphoria Editor was developed by          --
 		--            Rapid Deployment Software.                --
@@ -59,6 +47,17 @@
 --   When you switch back, all of these state variables, plus the 2-d text
 --   buffer variable for that window are restored. Most of the code in ed is 
 --   not even "aware" that there can be multiple-windows.
+----
+-- 1000 macros for business purposes.
+
+-- New: added more macros (100 macros)
+-- Fixed Linux features
+-- New feature: save and load macros (to be completed)
+
+-- ED.EX from Euphoria v4.0.5 modified for recordable macros.
+--  Current features are: 10 programmable macros -- ESC, j -- accesses the macro menu,
+--  view/record/stop-record/select-current-macro from the macro menu,
+--  F12 plays the current macro.
 
 without type_check -- makes it a bit faster
 without warning
@@ -172,12 +171,12 @@ ifdef UNIX then
 	NUM_PAD_LOCK = -999 -- jjc
 	ignore_keys = {}
 elsifdef WINDOWS then
-object kc
+	object kc
 
 	kc = key_codes()
 	
 	TAB_KEY = kc[KC_TAB] -- jjc
-	SAFE_CHAR = 14
+	SAFE_CHAR = 32 -- 14
 	delete_cmd = "del "
 	compare_cmd = "fc /T "
 	ESCAPE = 27
@@ -438,14 +437,14 @@ buffer_number = 0
 sequence key_queue -- queue of input characters forced by ed
 key_queue = {}
 
-procedure delay(atom n)
--- an n second pause while a message is on the screen
-	atom t
-
-	t = time()
-	while time() < t + n do
-	end while
-end procedure
+-- procedure delay(atom n)
+-- -- an n second pause while a message is on the screen
+-- 	atom t
+-- 
+-- 	t = time()
+-- 	while time() < t + n do
+-- 	end while
+-- end procedure
 
 procedure set_modified()
 -- buffer differs from file
@@ -1130,7 +1129,6 @@ function delete_window()
 -- delete the current window    
 	boolean buff_in_use
 	
-	buffer_list[buffer_number] = {buffer, modified, buffer_version}
 	window_list = window_list[1..window_number-1] & 
 				  window_list[window_number+1..length(window_list)]
 	buff_in_use = FALSE
@@ -1142,6 +1140,8 @@ function delete_window()
 	end for 
 	if not buff_in_use then
 		buffer_list[buffer_number] = 0 -- discard the buffer
+	else
+		buffer_list[buffer_number] = {buffer, modified, buffer_version} -- jjc
 	end if
 	if length(window_list) = 0 then
 		return TRUE
@@ -1824,7 +1824,7 @@ procedure delete_editbuff()
 end procedure
 
 constant ids = 
--- "\t\n\r\\" &
+"\t\n\r\\" &
 {ESCAPE, CR, NUM_PAD_ENTER, BS, HOME, END, CONTROL_HOME, CONTROL_END,
 		PAGE_UP, PAGE_DOWN, INSERT, NUM_PAD_SLASH,
 		DELETE, XDELETE, ARROW_LEFT, ARROW_RIGHT,
@@ -1833,7 +1833,7 @@ constant ids =
 		NUM_PAD_ASTRISK, NUM_PAD_PLUS, NUM_PAD_MINUS, NUM_PAD_LOCK, -- jjc
 		CONTROL_DELETE}  -- key for line-delete 
 constant names = 
--- {"\\t","\\n","\\r","\\"} &
+{"\'\\t\'","\'\\n\'","\'\\r\'","\'\\\'"} &
 {"ESCAPE", "CR", "NUM_PAD_ENTER", "BS", "HOME", "END", "CONTROL_HOME", "CONTROL_END",
 		"PAGE_UP", "PAGE_DOWN", "INSERT", "NUM_PAD_SLASH",
 		"DELETE", "XDELETE", "ARROW_LEFT", "ARROW_RIGHT",
@@ -1964,8 +1964,6 @@ while 1 do
 		macro += numeric({command[1]})
 		macro += 1
 		
-		--get_macro_menu()
-		
 	elsif command[1] = 'v' then
 		-- view macros
 		--example:  ESCAPE,'f',CR,ARROW_RIGHT,BS,'e',ARROW_LEFT
@@ -1995,8 +1993,11 @@ while 1 do
 					puts(1, ",")
 				end if
 				pos = get_position()
-				if pos[2] + 20 > config[VC_COLUMNS] then -- max: 20 characters
+				if pos[2] + 20 > config[VC_COLUMNS] then -- max length is 20 characters
 					puts(1, "\n")
+					if pos[1] > config[VC_LINES] then -- only show first 24 lines
+						exit
+					end if
 				end if
 			end for
 			--if length(CUSTOM_KEYSTROKES[macro]) then
@@ -2015,8 +2016,6 @@ while 1 do
 		
 		normal_video()
 		goto_line(0, b_col) -- refresh screen
-		
-		--get_macro_menu()
 		
 	else
 		set_top_line("")

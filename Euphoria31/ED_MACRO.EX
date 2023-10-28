@@ -1746,7 +1746,7 @@ procedure delete_editbuff()
 end procedure
 
 constant platforms = {"DOS32", "WIN32", "LINUX/FREEBSD"}
-function version_string_long(integer i)
+function my_version_string_long(integer i)
     i = platform()
     return platforms[i]
 end function
@@ -1816,7 +1816,7 @@ procedure ed_macro_menu()
 	end if
 	macro_history = update_history(macro_history, command)
     else
-	set_top_line("Export macros, [" & version_string_long(1) & "]? ")
+	set_top_line("Export macros, [" & my_version_string_long(1) & "]? ")
 	if find('y', key_gets("yn", {})) then
 	    self_command = open("ed_macro.txt", "w")
 	    if self_command = -1 then
@@ -1826,7 +1826,7 @@ procedure ed_macro_menu()
 		for i = 1 to length(answer) do
 		    answer[i] = {macros[1][i], macros[2][i]}
 		end for
-		puts(self_command, "\"ed_macro basic\" \"" & version_string_long(1) & "\"\n")
+		puts(self_command, "\"ed_macro basic\" \"" & my_version_string_long(1) & "\"\n")
 		pretty_print(self_command, answer, {3})
 		answer = {}
 		close(self_command)
@@ -1857,7 +1857,7 @@ procedure ed_macro_menu()
 			answer = get(self_command)
 			if answer[1] != GET_SUCCESS then
 			    set_top_line("Couldn\'t read version in file.")
-			elsif not equal(answer[2], version_string_long(1)) then
+			elsif not equal(answer[2], my_version_string_long(1)) then
 			    set_top_line("Error: File originated from another platform. Try exporting and compare.")
 			else
 			    answer = get(self_command)

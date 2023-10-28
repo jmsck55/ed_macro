@@ -1,1 +1,4 @@
 ex.err
+*.edb
+*.bak
+*.tmp
