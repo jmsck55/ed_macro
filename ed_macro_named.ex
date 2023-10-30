@@ -325,7 +325,8 @@ end ifdef
 constant macro_database_filename = "edm.edb" -- short for "ed_macro_named"
 
 -- Change this when macro behavior changes:
-constant table_name = "jmsck56, ed_macro_named.ex, v0.0.1, " & platform_name() & ", " & version_string_short()
+-- uses myget.e, which allows C-style hexadecimals.
+constant table_name = "jmsck56, ed_macro_named.ex, v0.0.2, " & platform_name() & ", " & version_string_short()
 
 ifdef WINDOWS then
 sequence ignore_control_keys = {
