@@ -111,7 +111,7 @@ include std/console.e
 include std/filesys.e
 include std/text.e
 
-include myget.e -- jjc
+include myget.e as myget -- jjc
 include std/eds.e -- jjc
 include std/io.e -- jjc
 include std/machine.e -- jjc
@@ -1251,7 +1251,7 @@ function add_line(file_number file_no, integer returnLine = FALSE)
 				chunk = chunk[f+1..$]
 				exit
 			elsif len then
-				tmp = get_bytes(file_no, 100) -- has to be 100 for speed with find()
+				tmp = myget:get_bytes(file_no, 100) -- has to be 100 for speed with find()
 				len = length(tmp)
 				chunk &= tmp
 			else
@@ -1266,7 +1266,7 @@ function add_line(file_number file_no, integer returnLine = FALSE)
 		end if
 		line = convert_tabs(STANDARD_TAB_WIDTH, edit_tab_width, clean(line))
 	else
-		line = get_bytes(file_no, 16) -- read 16 characters at a time
+		line = myget:get_bytes(file_no, 16) -- read 16 characters at a time
 		if length(line) = 0 then -- jjc
 			-- end of file
 			return FALSE 
@@ -1578,7 +1578,7 @@ function hex_to_bytes(sequence string)
 	-- trace(1)
 	bytes = {}
 	if length(string) = 0 then
-		return {GET_NOTHING, bytes}
+		return {GET_EOF, bytes}
 	end if
 	if and_bits(length(string), 1) then
 		string = '0' & string
@@ -1856,7 +1856,7 @@ function next_key()
 		key_queue = key_queue[2..$]
 	else
 		-- read a new keystroke from user
-		c = wait_key()
+		c = myget:wait_key()
 		if check_break() then
 			--c = CONTROL_C
 			c = (-CONTROL_C)
@@ -1888,7 +1888,7 @@ function next_key()
 			ifdef UNIX then
 				-- ANSI codes
 				if c = 79 then
-					c = wait_key()
+					c = myget:wait_key()
 					if c = 0 then
 						return HOME
 					elsif c = 101 then
@@ -1980,7 +1980,7 @@ function next_key()
 			elsedef
 				-- DOS/Windows
 				if c = 79 then
-					c = wait_key()
+					c = myget:wait_key()
 					if c = 0 then
 						return HOME
 					elsif c = 101 then
@@ -2900,7 +2900,7 @@ while 1 do
 			--end if
 			puts(1, "\n")
 		--end for
-		wait_key()
+		myget:wait_key()
 		
 		normal_video()
 		while get_key() != -1 do
@@ -3036,7 +3036,7 @@ procedure get_escape(boolean help)
 		pretty_print(SCREEN, s, {1,2,1,screen_width-2,"%d","%.10g",SAFE_CHAR,MAX_SAFE_CHAR,2,1})
 		--puts(SCREEN, "\n")
 		
-		wait_key()
+		myget:wait_key()
 		
 		normal_video()
 		while get_key() != -1 do
