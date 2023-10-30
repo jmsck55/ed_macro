@@ -122,6 +122,11 @@ include euphoria/info.e -- jjc
 
 --with trace
 
+function value(sequence s)
+    s = match_replace("0x", s, '#')
+    return stdget:value(s)
+end function
+
 constant TRUE = 1, FALSE = 0
 
 -- begin jjc, thanks K_D_R
