@@ -1,4 +1,5 @@
 -- (c) Copyright 2007 Rapid Deployment Software - See License.txt
+-- Copyright James Cook
 --
 -- Euphoria 3.1
 -- Input and Conversion Routines:
