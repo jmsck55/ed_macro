@@ -102,7 +102,7 @@ without warning
 
 include std/graphics.e
 include std/graphcst.e
-include std/get.e
+-- include std/get.e
 include std/wildcard.e
 include std/dll.e
 include std/sequence.e
@@ -111,6 +111,7 @@ include std/console.e
 include std/filesys.e
 include std/text.e
 
+include myget.e -- jjc
 include std/eds.e -- jjc
 include std/io.e -- jjc
 include std/machine.e -- jjc
@@ -121,11 +122,6 @@ include std/search.e -- jjc
 include euphoria/info.e -- jjc
 
 --with trace
-
-function value(sequence s)
-    s = match_replace("0x", s, '#')
-    return stdget:value(s)
-end function
 
 constant TRUE = 1, FALSE = 0
 

@@ -153,12 +153,14 @@ function get_number()
     end if
 
     -- get mantissa
+    -- jjc, begin
     if ch = '0' then
         get_ch()
 	if ch = 'x' then
             ch = '#'
 	end if
     end if
+    -- jjc, end
     if ch = '#' then
 	-- process hex integer and return
 	get_ch()
