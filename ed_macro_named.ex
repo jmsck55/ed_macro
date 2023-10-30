@@ -326,7 +326,7 @@ constant macro_database_filename = "edm.edb" -- short for "ed_macro_named"
 
 -- Change this when macro behavior changes:
 -- uses myget.e, which allows C-style hexadecimals.
-constant table_name = "jmsck56, ed_macro_named.ex, v0.0.2, " & platform_name() & ", " & version_string_short()
+constant table_name = "jmsck56, ed_macro_named.ex, v0.0.3, " & platform_name() & ", " & version_string_short()
 
 ifdef WINDOWS then
 sequence ignore_control_keys = {
@@ -3065,7 +3065,7 @@ procedure get_escape(boolean help)
 				end if
 				answer = CONTROL_CHAR & "{"
 				for i = 1 to length(command) do
-					answer = answer & sprintf("#%02x, ", {command[i]})
+					answer = answer & sprintf("0x%02x, ", {command[i]})
 				end for
 				answer[$-1] = '}'
 				answer[$] = CONTROL_CHAR
