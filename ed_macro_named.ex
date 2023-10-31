@@ -311,7 +311,7 @@ constant macro_database_filename = "edm.edb" -- short for "ed_macro_named"
 
 -- Change this when macro behavior changes:
 -- uses myget.e, which allows C-style hexadecimals.
-constant table_name = "jmsck56, ed_macro_named.ex, v0.0.5, " & platform_name() & ", " & version_string_short()
+constant table_name = "jmsck56, ed_macro_named.ex, v0.0.6, " & platform_name() & ", " & version_string_short()
 
 constant CUSTOM_KEY = F12
 sequence CUSTOM_KEYSTROKES = HOME & "-- " & ARROW_DOWN -- jjc
@@ -1219,8 +1219,8 @@ function add_line(file_number file_no, integer returnLine = FALSE)
 		while 1 do
 			-- trace(1)
 			f = find(ch, chunk)
-			if wrap_to_screen and length(chunk) > screen_width then
-				f = screen_width
+			if wrap_to_screen and length(chunk) > wrap_length then
+				f = wrap_length
 			end if
 			if f then
 				line = chunk[1..f] & "\n"
