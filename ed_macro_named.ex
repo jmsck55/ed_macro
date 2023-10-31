@@ -54,20 +54,6 @@
 
 -- (Possibly make a Webpage version of this program.)
 
--- 3 a.m. August 20, 2023:
--- [ ] Make it simpler, with run macro after each find (find_all), with a limit on the  maximum number of runs per command.
--- [ ] Only allow one (1), or ten (10) recordable macro(s) at a time. (???)
--- So that it doesn't become a "killer" app.
--- [ ] Have "[block character or %]\r\n" be the "end of line character sequence", i.e. "any line text\r\n"
-
--- [block character]"\r\n"[block character]
-
--- [ ] Have [block character] replaced with [%] in code.
--- or, \{ 0x01,0x02 \} or \[ {0xff,13,10} \]
--- or, [block character]"\r\n"[block character] -- I like this one.
--- [ ] Don't record repeating keystrokes.
--- [X] Typecheck value() function, between block characters, for a sequence of characters.
-
 -- \?hex\?
 -- On Apple macOS: {194, 182} == ¶
 -- Unicode symbols: (https://symbl.cc/en/)
@@ -325,7 +311,7 @@ constant macro_database_filename = "edm.edb" -- short for "ed_macro_named"
 
 -- Change this when macro behavior changes:
 -- uses myget.e, which allows C-style hexadecimals.
-constant table_name = "jmsck56, ed_macro_named.ex, v0.0.4, " & platform_name() & ", " & version_string_short()
+constant table_name = "jmsck56, ed_macro_named.ex, v0.0.5, " & platform_name() & ", " & version_string_short()
 
 constant CUSTOM_KEY = F12
 sequence CUSTOM_KEYSTROKES = HOME & "-- " & ARROW_DOWN -- jjc
@@ -2757,7 +2743,7 @@ procedure macro_menu() -- jjc
 					set_top_line("File does not exist")
 					getc(0) -- make the user press Enter.
 				else
-					puts(fn, "-- EDM.EX dump file format: \"Macro\" WHITESPACE {Keystrokes} NEWLINE\n")
+					puts(fn, "\"" & table_name & "\"\n")
 					for i = 1 to db_table_size() do
 						printf(fn, "\"%s\"\t", {db_record_key(i)})
 						print(fn, db_record_data(i))
@@ -2782,7 +2768,7 @@ procedure macro_menu() -- jjc
 						set_top_line(sprintf("Unable to write to file \"%s\"", {MACRO_FILE}))
 						getc(0) -- make the user press Enter.
 					else
-						puts(fn, "-- EDM.EX dump file format: \"Macro\" TAB_CHARACTER {Keystrokes} NEWLINE\n")
+						puts(fn, "\"" & table_name & "\"\n")
 						for i = 1 to db_table_size() do
 							printf(fn, "\"%s\"\t", {db_record_key(i)})
 							print(fn, db_record_data(i))
@@ -2802,25 +2788,35 @@ procedure macro_menu() -- jjc
 						getc(0) -- make the user press Enter.
 					else
 						count = 0
-						tmp = gets(fn) -- ignore first line
-						tmp = get(fn)
-						while tmp[1] = GET_SUCCESS do
-							if sequence(tmp[2]) then
-								filename = tmp[2]
-								tmp = get(fn)
-								if tmp[1] = GET_SUCCESS and sequence(tmp[2]) then
-									store_CUSTOM_KEYSTROKES(filename, tmp[2])
-									count += 1
+						tmp = get(fn) -- first line
+						if tmp[1] = GET_SUCCESS and equal(tmp[2], table_name) then
+							tmp = get(fn)
+							while tmp[1] = GET_SUCCESS do
+								if sequence(tmp[2]) then
+									filename = tmp[2]
+									tmp = get(fn)
+									if tmp[1] = GET_SUCCESS and sequence(tmp[2]) then
+										store_CUSTOM_KEYSTROKES(filename, tmp[2])
+										count += 1
+									else
+										count = -count
+										exit
+									end if
 								else
 									count = -count
 									exit
 								end if
-							else
-								count = -count
-								exit
+								tmp = get(fn)
+							end while
+						else
+							if atom(tmp[2]) or not is_bytes(tmp[2]) then
+								tmp[2] = "unknown"
 							end if
-							tmp = get(fn)
-						end while
+							set_top_line(sprintf("Wrong table version: %s", {tmp[2]}))
+							getc(0)
+							set_top_line(sprintf("Needs to be: %s", {table_name}))
+							getc(0)
+						end if
 						close(fn)
 						if count > 0 then
 							set_top_line(sprintf("Loaded all macros: %d loaded", {count}))
@@ -3263,9 +3259,8 @@ procedure get_escape(boolean help)
 			line_ending = APPLE_CR
 		elsif answer[1] = 'n' then
 			line_ending = {"",""} -- binary, no line ending characters (CR is just for displaying the file)
-		else
-			set_top_line("Incorrect option") -- no change in line endings
 		end if
+		set_top_line(sprintf("Line ending: %s", {line_ending[2]})) -- no change in line endings
 		
 	else
 		set_top_line("")
@@ -3322,7 +3317,11 @@ procedure xinsert(char key)
 		-- truncate this line and create a new line using xtail
 		
 		tmp1 = buffer_at(b_line) -- jjc
-		set_buffer_at(b_line, tmp1[1..b_col-1] & line_ending[2] & "\n") -- jjc
+		tmp1 = tmp1[1..b_col-1]
+		if key = CR then
+			tmp1 &= line_ending[2]
+		end if
+		set_buffer_at(b_line, tmp1 & '\n') -- jjc
 		
 		-- keep this:
 		buffer_insert_nodes_at(b_line+1, {xtail}) -- jjc
@@ -3553,7 +3552,8 @@ procedure delete_char()
 			if length(line_ending[1]) then
 				if length(s) < b_col then
 					if equal(xhead[$-length(s)+1..$], s) then
-						xhead = xhead[1..$-length(s)]
+						xhead = xhead[1..$-length(s)] -- trim off line ending.
+						b_col -= length(s)
 					end if
 				end if
 			end if
@@ -3564,13 +3564,6 @@ procedure delete_char()
 			--buffer[b_line] = xhead & buffer[b_line+1]
 			DisplayLine(b_line, s_line, FALSE)
 			save_b_col = b_col
-			if length(line_ending[1]) then
-				if length(s) <= length(tmp) then
-					if equal(tmp[$-length(s)+1..$], s) then
-						save_b_col -= length(s) -- jjc
-					end if
-				end if
-			end if
 			delete_line(b_line + 1)
 			for i = 1 to save_b_col - 1 do
 				arrow_right()
@@ -3694,16 +3687,27 @@ procedure edit_file()
 
 			elsif key = DELETE or key = XDELETE then
 				tmp = buffer_at(b_line)
+				-- trace(1)
+				if length(tmp) - b_col = length(line_ending[2]) and
+						equal(tmp[$-length(line_ending[2])..$], line_ending[2] & '\n') then
+					tmp = line_ending[2] & '\n'
+				else
+					tmp = {tmp[b_col]}
+				end if
 				if not adding_to_kill then
-					kill_buffer = {tmp[b_col]}
+					kill_buffer = tmp
 				elsif sequence(kill_buffer[1]) then
 					-- we were building up deleted lines,
 					-- but now we'll switch to chars
-					kill_buffer = {tmp[b_col]}
+					kill_buffer = tmp
 				else
-					kill_buffer = append(kill_buffer, tmp[b_col])
+					for i = 1 to length(tmp) do
+						kill_buffer = append(kill_buffer, tmp[i])
+					end for
 				end if
-				delete_char()
+				for i = 1 to length(tmp) do
+					delete_char()
+				end for
 
 			elsif key = CONTROL_DELETE or key = CONTROL_D then
 				tmp = buffer_at(b_line)
