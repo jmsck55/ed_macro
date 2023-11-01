@@ -155,7 +155,7 @@ constant
 elsedef
 constant 
 		 CONTROL_B = -999,
-		 CONTROL_C = 1020096, -- Control+Break
+		 CONTROL_C = -999,
 		 CONTROL_D = -999,   -- alternate key for line-delete  
 		 CONTROL_L = -999,
 		 CONTROL_N = -999,
