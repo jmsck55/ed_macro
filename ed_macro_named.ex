@@ -311,7 +311,7 @@ constant macro_database_filename = "edm.edb" -- short for "ed_macro_named"
 
 -- Change this when macro behavior changes:
 -- uses myget.e, which allows C-style hexadecimals.
-constant table_name = "jmsck56, ed_macro_named.ex, v0.0.7, " & platform_name() & ", " & version_string_short()
+constant table_name = "jmsck56, ed_macro_named.ex, v0.0.8, " & platform_name() & ", " & version_string_short()
 
 constant CUSTOM_KEY = F12
 sequence CUSTOM_KEYSTROKES = HOME & "-- " & ARROW_DOWN -- jjc
@@ -823,7 +823,7 @@ end function
 
 positive_int screen_length  -- number of lines on physical screen
 positive_int screen_width
-integer wrap_length -- jjc
+positive_int wrap_length -- jjc
 
 global sequence BLANK_LINE
 
@@ -1217,27 +1217,28 @@ function add_line(file_number file_no, integer returnLine = FALSE)
 
 	-- begin jjc:
 	if length(line_ending[1]) then
-		integer f, flag, ch
-		flag = -1
+		integer found, flag, ch
+		flag = 0
 		ch = line_ending[1][$]
 		while 1 do
-			-- trace(1)
-			f = find(ch, chunk)
-			if wrap_to_screen and length(chunk) > wrap_length then
-				if wrap_length < f then
-					f = wrap_length
+			found = find(ch, chunk, flag + 1)
+			if wrap_to_screen then -- and wrap_length < length(chunk) then
+				-- trace(1)
+				if found = 0 then
+					found = length(chunk) + 1
+				end if
+				if wrap_length < found then
+					found = wrap_length
 				end if
 			end if
-			if f then
-				line = chunk[1..f] & "\n"
-				chunk = chunk[f+1..$]
+			if found and found <= length(chunk) then
+				line = chunk[1..found] & '\n'
+				chunk = chunk[found + 1..$]
 				exit
 			end if
-			if flag then
-				sequence tmp = myget:get_bytes(file_no, 100) -- has to be 100 for speed with find()
-				flag = length(tmp)
-				chunk &= tmp
-			else
+			flag = length(chunk)
+			chunk &= myget:get_bytes(file_no, 100) -- has to be 100 for speed with find()
+			if flag = length(chunk) then
 				line = chunk
 				chunk = {}
 				exit
@@ -2979,10 +2980,11 @@ procedure get_escape(boolean help)
 	if help then
 		command = "h"
 	else
-		first_bold("jmod ") -- jjc
-		first_bold("b ") -- jjc
-		first_bold("pref ") -- jjc, for line endings
-		--first_bold("help ")
+		first_bold("j") -- jjc
+		first_bold("b") -- jjc
+		first_bold("p") -- jjc, for line endings
+		first_bold("v ") -- jjc
+		first_bold("help ")
 		first_bold("clone ")
 		first_bold("quit ")
 		first_bold("save ")
@@ -2996,10 +2998,9 @@ procedure get_escape(boolean help)
 		first_bold("replace ")
 		first_bold("lines ")
 		first_bold("mods ")
-		first_bold("view ") -- jjc
 		text_color(TOP_LINE_TEXT_COLOR)
 		--puts(SCREEN, "ddd CR: ")
-		command = key_gets("vpbjhcqswnedfrlm", {}) & ' ' -- jjc
+		command = key_gets("pbjvhcqswnedfrlm", {}) & ' ' -- jjc
 	end if
 
 	if command[1] = 'v' then -- view line
