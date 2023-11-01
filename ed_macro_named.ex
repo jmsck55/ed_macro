@@ -311,7 +311,7 @@ constant macro_database_filename = "edm.edb" -- short for "ed_macro_named"
 
 -- Change this when macro behavior changes:
 -- uses myget.e, which allows C-style hexadecimals.
-constant table_name = "jmsck56, ed_macro_named.ex, v0.0.6, " & platform_name() & ", " & version_string_short()
+constant table_name = "jmsck56, ed_macro_named.ex, v0.0.7, " & platform_name() & ", " & version_string_short()
 
 constant CUSTOM_KEY = F12
 sequence CUSTOM_KEYSTROKES = HOME & "-- " & ARROW_DOWN -- jjc
@@ -328,7 +328,11 @@ constant WINDOWS_CR = {"\r\n", "\\r\\n"}
 constant LINUX_CR = {"\n", "\\n"}
 constant APPLE_CR = {"\r", "\\r"}
 constant BINARY_CR = {"",""}
-sequence line_ending = WINDOWS_CR -- or {"",""} for none
+ifdef WINDOWS then
+	sequence line_ending = WINDOWS_CR -- or {"",""} for none
+elsedef
+	sequence line_ending = LINUX_CR
+end ifdef
 
 constant PROG_INDENT = 8  -- tab width for editing program source files -- jjc
 			  -- (tab width is 8 for other files)
@@ -1220,7 +1224,9 @@ function add_line(file_number file_no, integer returnLine = FALSE)
 			-- trace(1)
 			f = find(ch, chunk)
 			if wrap_to_screen and length(chunk) > wrap_length then
-				f = wrap_length
+				if wrap_length < f then
+					f = wrap_length
+				end if
 			end if
 			if f then
 				line = chunk[1..f] & "\n"
@@ -2157,7 +2163,7 @@ procedure new_screen_length()
 		config = video_config() -- jjc
 		screen_length = config[VC_SCRNLINES]
 		screen_width = config[VC_SCRNCOLS]
-		wrap_length = screen_width - 2
+		wrap_length = screen_width - length(line_ending[2])
 		w = window_number
 		save_state()
 		set_window_size()
@@ -3261,6 +3267,7 @@ procedure get_escape(boolean help)
 			line_ending = {"",""} -- binary, no line ending characters (CR is just for displaying the file)
 		end if
 		set_top_line(sprintf("Line ending: %s", {line_ending[2]})) -- no change in line endings
+		wrap_length = screen_width - length(line_ending[2])
 		
 	else
 		set_top_line("")
@@ -3957,7 +3964,7 @@ procedure ed_main()
 	end if
 	screen_length = config[VC_SCRNLINES]
 	screen_width = config[VC_SCRNCOLS]
-	wrap_length = screen_width - 2
+	wrap_length = screen_width - length(line_ending[2])
 
 	BLANK_LINE = repeat(' ', screen_width)
 	window_length = screen_length - 1
