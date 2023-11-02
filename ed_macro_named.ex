@@ -311,8 +311,11 @@ constant macro_database_filename = "edm.edb" -- short for "ed_macro_named"
 
 -- Change this when macro behavior changes:
 -- uses myget.e, which allows C-style hexadecimals.
+ifdef USE_CONTROL_KEYS then
 constant table_name = "jmsck56, ed_macro_named.ex, v0.0.8, " & platform_name() & ", " & version_string_short()
-
+elsedef
+constant table_name = "jmsck56, ed_macro_named.ex, without control keys, v0.0.8, " & platform_name() & ", " & version_string_short()
+end ifdef
 constant CUSTOM_KEY = F12
 sequence CUSTOM_KEYSTROKES = HOME & "-- " & ARROW_DOWN -- jjc
 
