@@ -179,15 +179,13 @@ integer ESCAPE, CR, NUM_PAD_ENTER, BS, HOME, END, CONTROL_HOME, CONTROL_END,
 sequence delete_cmd, compare_cmd
 integer SAFE_CHAR -- minimum ASCII char that's safe to display
 integer MAX_SAFE_CHAR -- maximum ASCII char that's safe to display
-sequence UNSAFE_CHARS -- jjc
+-- sequence UNSAFE_CHARS -- jjc
 sequence ignore_keys
 sequence window_swap_keys
 sequence window_name
-		 
+
 ifdef UNIX then
 	TAB_KEY = '\t' -- jjc
-	SAFE_CHAR = 32
-	--MAX_SAFE_CHAR = 255 -- jjc
 	delete_cmd = "rm "
 	compare_cmd = "diff "
 	ESCAPE = 27
@@ -231,9 +229,6 @@ elsifdef WINDOWS then
 	
 	TAB_KEY = kc[KC_TAB] -- jjc
 	--UNSAFE_CHARS = {0,13,179,219,220,221,222,223,244,245,249,250,254,255} -- jjc, 26 is interpreted as EOF (end of file)
-	SAFE_CHAR = 14
-	--SAFE_CHAR = 32 -- jjc
-	--MAX_SAFE_CHAR = 126 -- jjc
 	delete_cmd = "del "
 	compare_cmd = "fc /T " -- jjc, lookat, binary mode may need /B
 	ESCAPE = 27
@@ -306,15 +301,26 @@ end ifdef
 
 -------- START OF USER-MODIFIABLE PARAMETERS ---------------------------------- 
 
+ifdef WINDOWS then
+	SAFE_CHAR = ' ' -- ' ', 14, or 32 -- jjc
+	MAX_SAFE_CHAR = '~' -- '~', 126, or 255 -- jjc
+	-- You may want:
+	--SAFE_CHAR = 14
+	--MAX_SAFE_CHAR = 255
+elsedef
+	SAFE_CHAR = 32
+	MAX_SAFE_CHAR = 255 -- jjc
+end ifdef
+
 -- make your own specialized macro command(s):
 constant macro_database_filename = "edm.edb" -- short for "ed_macro_named"
 
 -- Change this when macro behavior changes:
 -- uses myget.e, which allows C-style hexadecimals.
 ifdef USE_CONTROL_KEYS then
-constant table_name = "jmsck56, ed_macro_named.ex, v0.0.8, " & platform_name() & ", " & version_string_short()
+constant table_name = "jmsck56, ed_macro_named.ex, v0.0.8, min_char=" & SAFE_CHAR & ", max_char=" & MAX_SAFE_CHAR & ", " & platform_name() & ", " & version_string_short()
 elsedef
-constant table_name = "jmsck56, ed_macro_named.ex, without control keys, v0.0.8, " & platform_name() & ", " & version_string_short()
+constant table_name = "jmsck56, ed_macro_named.ex, without control keys, v0.0.8, min_char=" & SAFE_CHAR & ", max_char=" & MAX_SAFE_CHAR & ", " & platform_name() & ", " & version_string_short()
 end ifdef
 constant CUSTOM_KEY = F12
 sequence CUSTOM_KEYSTROKES = HOME & "-- " & ARROW_DOWN -- jjc
@@ -1193,15 +1199,15 @@ function clean(sequence line)
 	while i < length(line) do
 	--for i = 1 to length(line)-1 do
 		c = line[i]
--- 		if c < SAFE_CHAR and c != '\t' then
--- 			line[i] = CONTROL_CHAR  -- replace with displayable character
--- 			control_chars = TRUE
--- 		end if
+--              if c < SAFE_CHAR and c != '\t' then
+--                      line[i] = CONTROL_CHAR  -- replace with displayable character
+--                      control_chars = TRUE
+--              end if
 		f = find(c, ESCAPED_CHARS)
 		if f then -- jjc
 			line = line[1..i-1] & "\\" & ESCAPE_CHARS[f] & line[i+1..$]
 			i += 1
-		elsif c > MAX_SAFE_CHAR or (c < SAFE_CHAR and c != '\t') then -- jjc
+		elsif (c < SAFE_CHAR and c != '\t') or c > MAX_SAFE_CHAR then -- jjc
 			len = length(line)
 			line = line[1..i-1] & sprintf("\\x%02x",{c}) & line[i+1..$] -- two digit hex value
 			i += (length(line) - len)
@@ -2545,20 +2551,20 @@ procedure save_file(sequence save_name, integer keep = TRUE) -- jjc
 			-- s = s & line
 			exit
 		end if
--- 		if cr_removed and not strip_cr then
--- 			-- He wants CR's - put them back.
--- 			-- All lines have \n at the end.
--- 			if length(line) < 2 or line[length(line)-1] != '\r' then
--- 				line = line[1..length(line)-1] & "\r\n"
--- 			end if
--- 		end if
+--              if cr_removed and not strip_cr then
+--                      -- He wants CR's - put them back.
+--                      -- All lines have \n at the end.
+--                      if length(line) < 2 or line[length(line)-1] != '\r' then
+--                              line = line[1..length(line)-1] & "\r\n"
+--                      end if
+--              end if
 		puts(file_no, convert_tabs(edit_tab_width, STANDARD_TAB_WIDTH, s))
 	end for
 	close(file_no)
--- 	if not strip_cr then
--- 		-- the file doesn't have CR's
--- 		cr_removed = FALSE -- no longer binary
--- 	end if
+--      if not strip_cr then
+--              -- the file doesn't have CR's
+--              cr_removed = FALSE -- no longer binary
+--      end if
 	if start_line then -- done.
 		-- there was a format error in a hexidecimal number.
 		-- restore the state of the editor, and display the error.
@@ -2594,11 +2600,11 @@ procedure save_file(sequence save_name, integer keep = TRUE) -- jjc
 		stop = FALSE
 		return
 	else
-	-- 	if keep = FALSE then
-	-- 		for i = 1 to length_buffer do
-	-- 			buffer_delete_node_at(1) -- fastest to start at one (1).
-	-- 		end for
-	-- 	end if
+	--      if keep = FALSE then
+	--              for i = 1 to length_buffer do
+	--                      buffer_delete_node_at(1) -- fastest to start at one (1).
+	--              end for
+	--      end if
 		puts(SCREEN, "ok")
 	end if
 	-- end jjc.
@@ -3337,14 +3343,14 @@ procedure xinsert(char key)
 		-- keep this:
 		buffer_insert_nodes_at(b_line+1, {xtail}) -- jjc
 		
--- 		-- old code:
--- 		-- make room for new line:
--- 		buffer = append(buffer, 0)
--- 		for i = length(buffer)-1 to b_line+1 by -1 do
--- 		        buffer[i+1] = buffer[i]
--- 		end for
--- 		-- store new line
--- 		buffer[b_line+1] = xtail
+--              -- old code:
+--              -- make room for new line:
+--              buffer = append(buffer, 0)
+--              for i = length(buffer)-1 to b_line+1 by -1 do
+--                      buffer[i+1] = buffer[i]
+--              end for
+--              -- store new line
+--              buffer[b_line+1] = xtail
 		
 		if s_line = window_length then
 			arrow_down()
@@ -3396,9 +3402,7 @@ procedure insert_string(sequence text)
 			c = text[i]
 			ob = {c} -- jjc
 			if c != CONTROL_CHAR then
-				--if c < SAFE_CHAR or c > MAX_SAFE_CHAR then -- jjc
 				if (c < SAFE_CHAR and c != '\t') or c > MAX_SAFE_CHAR then -- jjc
-				--if find(text[i], UNSAFE_CHARS) then -- jjc
 					ob = sprintf("\\x%02x",{c})
 				end if
 			end if
