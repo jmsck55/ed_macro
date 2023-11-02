@@ -187,7 +187,7 @@ sequence window_name
 ifdef UNIX then
 	TAB_KEY = '\t' -- jjc
 	SAFE_CHAR = 32
-	MAX_SAFE_CHAR = 255 -- jjc
+	--MAX_SAFE_CHAR = 255 -- jjc
 	delete_cmd = "rm "
 	compare_cmd = "diff "
 	ESCAPE = 27
@@ -231,9 +231,9 @@ elsifdef WINDOWS then
 	
 	TAB_KEY = kc[KC_TAB] -- jjc
 	--UNSAFE_CHARS = {0,13,179,219,220,221,222,223,244,245,249,250,254,255} -- jjc, 26 is interpreted as EOF (end of file)
-	--SAFE_CHAR = 14
-	SAFE_CHAR = 32 -- jjc
-	MAX_SAFE_CHAR = 126 -- jjc
+	SAFE_CHAR = 14
+	--SAFE_CHAR = 32 -- jjc
+	--MAX_SAFE_CHAR = 126 -- jjc
 	delete_cmd = "del "
 	compare_cmd = "fc /T " -- jjc, lookat, binary mode may need /B
 	ESCAPE = 27
