@@ -5,6 +5,12 @@ ed_macro's git repository webpage:
 
 https://github.com/jmsck55/ed_macro
 
+ed_macro is written in the Euphoria Programming Language.
+
+Euphoria's website:
+
+https://openeuphoria.org/
+
 Make a Euphoria v3.1.1 version of ed_macro.ex for DOS and early Windows.  Make a separate 64-bit version as well.
 
 - [x] DOS32, Win32, and Win64 work with limited support for some features.
