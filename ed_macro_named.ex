@@ -97,6 +97,7 @@ include std/console.e
 include std/filesys.e
 include std/text.e
 
+-- uses myget.e, which allows C-style hexadecimals:
 include myget.e as myget -- jjc
 include std/eds.e -- jjc
 include std/io.e -- jjc
@@ -316,11 +317,10 @@ end ifdef
 constant macro_database_filename = "edm.edb" -- short for "ed_macro_named"
 
 -- Change this when macro behavior changes:
--- uses myget.e, which allows C-style hexadecimals.
 ifdef USE_CONTROL_KEYS then
-constant table_name = "jmsck56, ed_macro_named.ex, v0.0.8, min_char=" & SAFE_CHAR & ", max_char=" & MAX_SAFE_CHAR & ", " & platform_name() & ", " & version_string_short()
+constant table_name = "jmsck56, ed_macro_named.ex, v0.0.9, min_char=" & SAFE_CHAR & ", max_char=" & MAX_SAFE_CHAR & ", " & platform_name() & ", " & version_string_short()
 elsedef
-constant table_name = "jmsck56, ed_macro_named.ex, without control keys, v0.0.8, min_char=" & SAFE_CHAR & ", max_char=" & MAX_SAFE_CHAR & ", " & platform_name() & ", " & version_string_short()
+constant table_name = "jmsck56, ed_macro_named.ex, without control keys, v0.0.9, min_char=" & SAFE_CHAR & ", max_char=" & MAX_SAFE_CHAR & ", " & platform_name() & ", " & version_string_short()
 end ifdef
 constant CUSTOM_KEY = F12
 sequence CUSTOM_KEYSTROKES = HOME & "-- " & ARROW_DOWN -- jjc
@@ -1199,10 +1199,10 @@ function clean(sequence line)
 	while i < length(line) do
 	--for i = 1 to length(line)-1 do
 		c = line[i]
---              if c < SAFE_CHAR and c != '\t' then
---                      line[i] = CONTROL_CHAR  -- replace with displayable character
---                      control_chars = TRUE
---              end if
+-- 		if c < SAFE_CHAR and c != '\t' then
+-- 			line[i] = CONTROL_CHAR  -- replace with displayable character
+-- 			control_chars = TRUE
+-- 		end if
 		f = find(c, ESCAPED_CHARS)
 		if f then -- jjc
 			line = line[1..i-1] & "\\" & ESCAPE_CHARS[f] & line[i+1..$]

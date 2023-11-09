@@ -165,6 +165,11 @@ function get_number()
 	-- process hex integer and return
 	get_ch()
 	while TRUE do
+	    -- jjc, begin
+	    if ch >= 'a' and ch <= 'z' then
+		ch -= 32
+	    end if
+	    -- jjc, end
 	    hex_digit = find(ch, HEX_DIGITS)-1
 	    if hex_digit >= 0 then
 		ndigits += 1
