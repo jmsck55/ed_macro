@@ -14,7 +14,7 @@
 --
 ------------------------------------------------------------------------------
 -- ed_macro_mod, a recordable macro version of ed.ex
--- This is the original ed_macro_named.ex
+-- This, EDM.EX, is the Euphoria v3.1.1 version of ed_macro_named.ex
 ------------------------------------------------------------------------------
 		----------------------------------------------------------
 		--       This Euphoria Editor was developed by          --
@@ -61,6 +61,7 @@
 -- No control keys, for international keyboards.
 
 -- Comment out this line for international keyboards:
+-- Use instead the /USE_CONTROL_KEYS as the first command line argument, after edm.ex
 --with define USE_CONTROL_KEYS
 
 -- NOTE: To use all features, in Windows,
@@ -86,27 +87,38 @@
 without type_check -- makes it a bit faster
 without warning
 
-include std/graphics.e
-include std/graphcst.e
--- include std/get.e
-include std/wildcard.e
-include std/dll.e
-include std/sequence.e
-include std/os.e
-include std/console.e
-include std/filesys.e
-include std/text.e
+include graphics.e
+include file.e
+include wildcard.e
+include dll.e
 
--- uses myget.e, which allows C-style hexadecimals:
+-- jjc:
+include database.e
+include misc.e
+
+-- include std/graphics.e
+-- include std/graphcst.e
+-- -- include std/get.e
+-- include std/wildcard.e
+-- include std/dll.e
+-- include std/sequence.e
+-- include std/os.e
+-- include std/console.e
+-- include std/filesys.e
+-- include std/text.e
+
+-- -- uses myget.e, which allows C-style hexadecimals:
 include myget.e as myget -- jjc
-include std/eds.e -- jjc
-include std/io.e -- jjc
-include std/machine.e -- jjc
-include std/math.e -- jjc
-include std/pretty.e -- jjc
-include std/types.e -- jjc
-include std/search.e -- jjc
-include euphoria/info.e -- jjc
+include mymisc.e as mymisc -- jjc
+include mysearch.e -- jjc
+-- include std/eds.e -- jjc
+-- include std/io.e -- jjc
+-- include std/machine.e -- jjc
+-- include std/math.e -- jjc
+-- include std/pretty.e -- jjc
+-- include std/types.e -- jjc
+-- include std/search.e -- jjc
+-- include euphoria/info.e -- jjc
 
 --with trace
 
@@ -116,8 +128,9 @@ constant TRUE = 1, FALSE = 0
 -- patch to fix Linux screen positioning
 -- I think this is J Brown's code:
 procedure get_real_text_starting_position()
-		sequence sss = ""
+		sequence sss, aa, bb
 		integer ccc
+		sss = ""
 		puts(1, 27&"[6n")
 		while 1 do
 			ccc = get_key()
@@ -129,44 +142,68 @@ procedure get_real_text_starting_position()
 			end if
 		end while
 		sss = sss[3..$]
-		sequence aa, bb
-		aa = value(sss[1..find(';', sss)-1])
-		bb = value(sss[find(';', sss)+1..$])
+		aa = myget:value(sss[1..find(';', sss)-1])
+		bb = myget:value(sss[find(';', sss)+1..$])
 		position(aa[2], bb[2])
 end procedure
-ifdef LINUX then
+if platform() = mymisc:LINUX then
 	get_real_text_starting_position()
-end ifdef
+end if
+
+integer USE_CONTROL_KEYS
+sequence cl
+cl = command_line()
+if platform() = mymisc:LINUX then
+	USE_CONTROL_KEYS = '-'
+else
+	USE_CONTROL_KEYS = '/'
+end if
+if length(cl) >= 3 and equal(cl[3], USE_CONTROL_KEYS & "USE_CONTROL_KEYS") then
+	USE_CONTROL_KEYS = TRUE
+	cl = cl[1..2] & cl[4..$]
+else
+	USE_CONTROL_KEYS = FALSE
+end if
 -- end jjc
 
+integer 
+		CONTROL_B,
+		CONTROL_C,
+		CONTROL_D,   -- alternate key for line-delete  
+		CONTROL_L,
+		CONTROL_N,
+		CONTROL_P,  -- alternate key for PAGE-DOWN in Linux. -- DOS uses this key for printing or something.
+		CONTROL_R,
+		CONTROL_T,
+		CONTROL_U,   -- alternate key for PAGE-UP in Linux
+		CONTROL_Y
+
 -- special input characters
-ifdef USE_CONTROL_KEYS then
-constant 
-		 CONTROL_B = 2,
-		 CONTROL_C = 3,
-		 CONTROL_D = 4,   -- alternate key for line-delete  
-		 CONTROL_L = 12,
-		 CONTROL_N = 14,
-		 CONTROL_P = 16,  -- alternate key for PAGE-DOWN in Linux.
-						  -- DOS uses this key for printing or something.
-		 CONTROL_R = 18,
-		 CONTROL_T = 20,
-		 CONTROL_U = 21,   -- alternate key for PAGE-UP in Linux
-		 CONTROL_Y = 25 -- 25 and 26 suspended on OSX
-elsedef
-constant 
-		 CONTROL_B = -999,
-		 CONTROL_C = -999,
-		 CONTROL_D = -999,   -- alternate key for line-delete  
-		 CONTROL_L = -999,
-		 CONTROL_N = -999,
-		 CONTROL_P = -999,  -- alternate key for PAGE-DOWN in Linux.
-						  -- DOS uses this key for printing or something.
-		 CONTROL_R = -999,
-		 CONTROL_T = -999,
-		 CONTROL_U = -999,   -- alternate key for PAGE-UP in Linux
+if USE_CONTROL_KEYS then
+		 CONTROL_B = 2
+		 CONTROL_C = 3
+		 CONTROL_D = 4   -- alternate key for line-delete  
+		 CONTROL_L = 12
+		 CONTROL_N = 14  -- jjc, CONTROL-ARROW_DOWN
+		 CONTROL_P = 16  -- alternate key for PAGE-DOWN in Linux. -- DOS uses this key for printing or something.
+		 CONTROL_R = 18
+		 CONTROL_T = 20
+		 CONTROL_U = 21  -- alternate key for PAGE-UP in Linux
+		 CONTROL_Y = 25  -- jjc, CONTROL-ARROW_UP, 25 and 26 suspended on OSX
+else
+		 CONTROL_B = -999
+		 CONTROL_C = -999
+		 CONTROL_D = -999   -- alternate key for line-delete  
+		 CONTROL_L = -999
+		 CONTROL_N = -999
+		 CONTROL_P = -999  -- alternate key for PAGE-DOWN in Linux. -- DOS uses this key for printing or something.
+		 CONTROL_R = -999
+		 CONTROL_T = -999
+		 CONTROL_U = -999  -- alternate key for PAGE-UP in Linux
 		 CONTROL_Y = -999
-end ifdef
+end if
+
+constant CAPS_LOCK = 314  -- exwc only
 
 integer ESCAPE, CR, NUM_PAD_ENTER, BS, HOME, END, CONTROL_HOME, CONTROL_END,
 	PAGE_UP, PAGE_DOWN, INSERT, NUM_PAD_SLASH,
@@ -184,8 +221,11 @@ integer MAX_SAFE_CHAR -- maximum ASCII char that's safe to display
 sequence ignore_keys
 sequence window_swap_keys
 sequence window_name
+integer SLASH
+-- object kc
 
-ifdef UNIX then
+if platform() = mymisc:LINUX then
+	SLASH = '/'
 	TAB_KEY = '\t' -- jjc
 	delete_cmd = "rm "
 	compare_cmd = "diff "
@@ -223,113 +263,114 @@ ifdef UNIX then
 	NUM_PAD_MINUS = -999
 	NUM_PAD_LOCK = -999 -- jjc
 	ignore_keys = {}
-elsifdef WINDOWS then
-	object kc
+else -- Windows or DOS32:
+	SLASH = '\\'
 
-	kc = key_codes()
+	-- kc = key_codes()
 	
-	TAB_KEY = kc[KC_TAB] -- jjc
+	TAB_KEY = 9 -- jjc
 	--UNSAFE_CHARS = {0,13,179,219,220,221,222,223,244,245,249,250,254,255} -- jjc, 26 is interpreted as EOF (end of file)
 	delete_cmd = "del "
 	compare_cmd = "fc /T " -- jjc, lookat, binary mode may need /B
 	ESCAPE = 27
 	CR = 13
 	BS = 8
-	HOME = kc[KC_HOME] --327
-	END = kc[KC_END] --335
-ifdef USE_CONTROL_KEYS then
-	CONTROL_HOME = 1020416 -- HOME + KM_CONTROL -- 583
-	CONTROL_END = 1020432 -- END + KM_CONTROL --591
-elsedef
+	HOME = 327
+	END = 335
+if USE_CONTROL_KEYS then
+	CONTROL_HOME = 375
+	CONTROL_END = 373
+else
 	CONTROL_HOME = -999
 	CONTROL_END = -999
-end ifdef
-	PAGE_UP = kc[KC_PRIOR] --329
-	PAGE_DOWN = kc[KC_NEXT] --337
-	INSERT = kc[KC_INSERT] -- 338
-	DELETE = kc[KC_DELETE] --339
+end if
+	PAGE_UP = 329
+	PAGE_DOWN = 337
+	INSERT = 338
+	DELETE = 339
 	XDELETE = -999 -- never
-	ARROW_LEFT = kc[KC_LEFT] -- 331
-	ARROW_RIGHT = kc[KC_RIGHT] --333
-ifdef USE_CONTROL_KEYS then
-	CONTROL_ARROW_LEFT = ARROW_LEFT + KM_CONTROL --587
-	CONTROL_ARROW_RIGHT = ARROW_RIGHT + KM_CONTROL --589
-elsedef
+	ARROW_LEFT = 331
+	ARROW_RIGHT = 333
+if USE_CONTROL_KEYS then
+	CONTROL_ARROW_LEFT = 371
+	CONTROL_ARROW_RIGHT = 372
+else
 	CONTROL_ARROW_LEFT = -999
 	CONTROL_ARROW_RIGHT = -999
-end ifdef
-	ARROW_UP = kc[KC_UP] --328
-	ARROW_DOWN = kc[KC_DOWN] -- 336
-	-- begin jjc:
-ifdef USE_CONTROL_KEYS then
-	CONTROL_ARROW_UP = ARROW_UP + KM_ALT
-	CONTROL_ARROW_DOWN = ARROW_DOWN + KM_ALT
-elsedef
+end if
+    ARROW_UP = 328
+    ARROW_DOWN = 336
+-- begin jjc:
+if USE_CONTROL_KEYS then
+	CONTROL_ARROW_UP = CONTROL_Y
+	CONTROL_ARROW_DOWN = CONTROL_N
+else
 	CONTROL_ARROW_UP = -999
 	CONTROL_ARROW_DOWN = -999
-end ifdef
-	-- end jjc
-	window_swap_keys = {kc[KC_F1],
-				kc[KC_F2],
-				kc[KC_F3],
-				kc[KC_F4],
-				kc[KC_F5],
-				kc[KC_F6],
-				kc[KC_F7],
-				kc[KC_F8],
-				kc[KC_F9],
-				kc[KC_F10]} -- F1 - F10
-	F1 = kc[KC_F1] --315
-	F10 = kc[KC_F10] --324  
-	F11 = kc[KC_F11] --343
-	F12 = kc[KC_F12] --344
-	NUM_PAD_ENTER = kc[KC_RETURN] --284
-	NUM_PAD_SLASH = kc[KC_DIVIDE] --309     
-	NUM_PAD_ASTRISK = kc[KC_MULTIPLY]
-	NUM_PAD_PLUS = kc[KC_ADD]
-	NUM_PAD_MINUS = kc[KC_SUBTRACT]
-	NUM_PAD_LOCK = kc[KC_NUMLOCK] -- jjc
-ifdef USE_CONTROL_KEYS then
-	CONTROL_DELETE = DELETE + KM_CONTROL --595 -- key for line-delete 
-elsedef
+end if
+-- end jjc
+	window_swap_keys = {315,316,317,318,319,320,321,322,323,324} -- F1 - F10
+	F1 = 315
+	F10 = 324
+	if platform() = mymisc:WIN32 then
+		F11 = 343
+		F12 = 344
+	else
+		F11 = 389
+		F12 = 390
+	end if
+	NUM_PAD_ENTER = 284
+	NUM_PAD_SLASH = 309     
+	NUM_PAD_ASTRISK = 42
+	NUM_PAD_PLUS = 43
+	NUM_PAD_MINUS = 45
+	NUM_PAD_LOCK = 325
+if USE_CONTROL_KEYS then
+	CONTROL_DELETE = 403 -- key for line-delete 
+			 -- (not available on some systems)
+	-- CONTROL_DELETE = DELETE + KM_CONTROL --595 -- key for line-delete 
+else
 	CONTROL_DELETE = -999
-end ifdef
-	ignore_keys = {kc[KC_CAPITAL], kc[KC_CONTROL]+KM_CONTROL, kc[KC_SHIFT]+KM_SHIFT, kc[KC_MENU]+KM_ALT}
-	kc = 0
-end ifdef
+end if
+	ignore_keys = {} -- {kc[KC_CAPITAL], kc[KC_CONTROL]+KM_CONTROL, kc[KC_SHIFT]+KM_SHIFT, kc[KC_MENU]+KM_ALT}
+	-- kc = 0
+end if
 
-	window_name        = {"F01:","F02:","F03:","F04:","F05:","F06:","F07:","F08:","F09:","F10:"}
+window_name = {"F01:","F02:","F03:","F04:","F05:","F06:","F07:","F08:","F09:","F10:"}
 
 -------- START OF USER-MODIFIABLE PARAMETERS ---------------------------------- 
 
-ifdef WINDOWS then
+if platform() = mymisc:LINUX then
+	SAFE_CHAR = 32
+	MAX_SAFE_CHAR = 255 -- jjc
+else
 	SAFE_CHAR = ' ' -- ' ', 14, or 32 -- jjc
 	MAX_SAFE_CHAR = '~' -- '~', 126, or 255 -- jjc
 	-- You may want:
 	--SAFE_CHAR = 14
 	--MAX_SAFE_CHAR = 255
-elsedef
-	SAFE_CHAR = 32
-	MAX_SAFE_CHAR = 255 -- jjc
-end ifdef
+end if
 
 -- make your own specialized macro command(s):
 constant macro_database_filename = "edm.edb" -- short for "ed_macro_named"
 
 -- Change this when macro behavior changes:
-ifdef USE_CONTROL_KEYS then
-	constant table_name = "edm.ex, v0.1.0, min=" & SAFE_CHAR & ", max=" & MAX_SAFE_CHAR & ", " & platform_name() & ", " & version_string_short()
-elsedef
-	constant table_name = "edm.ex, no CTRL, v0.1.0, min=" & SAFE_CHAR & ", max=" & MAX_SAFE_CHAR & ", " & platform_name() & ", " & version_string_short()
-end ifdef
+sequence table_name
+table_name = {"DOS32", "WIN32", "LINUX"}
+if USE_CONTROL_KEYS then
+	table_name = "EDM.EX, v0.1.0a, min=" & SAFE_CHAR & ", max=" & MAX_SAFE_CHAR & ", " & table_name[platform()]
+else
+	table_name = "EDM.EX, no CTRL, v0.1.0a, min=" & SAFE_CHAR & ", max=" & MAX_SAFE_CHAR & ", " & table_name[platform()]
+end if
 constant CUSTOM_KEY = F12
-sequence CUSTOM_KEYSTROKES = HOME & "-- " & ARROW_DOWN -- jjc
+sequence CUSTOM_KEYSTROKES
+CUSTOM_KEYSTROKES = HOME & "-- " & ARROW_DOWN
 
-object recording_macro = 0 -- jjc
-sequence current_macro = "default"
+object recording_macro recording_macro = 0 -- jjc
+sequence current_macro current_macro = "default"
 
 -- Wrap to screen:
-integer wrap_to_screen = 0 -- Boolean, 0 is, don't wrap to screen by default.
+integer wrap_to_screen wrap_to_screen = 0 -- Boolean, 0 is, don't wrap to screen by default.
 
 -- Starting CR line ending:
 constant CONTROL_CHAR = 254  -- change funny control chars to this -- jjc
@@ -337,16 +378,18 @@ constant WINDOWS_CR = {"\r\n", "\\r\\n"}
 constant LINUX_CR = {"\n", "\\n"}
 constant APPLE_CR = {"\r", "\\r"}
 constant BINARY_CR = {"",""}
-ifdef WINDOWS then
-	sequence line_ending = WINDOWS_CR -- or {"",""} for none
-elsedef
-	sequence line_ending = LINUX_CR
-end ifdef
+sequence line_ending
+if platform() = mymisc:LINUX then
+	line_ending = LINUX_CR
+else
+	line_ending = WINDOWS_CR -- or {"",""} for none
+end if
 
 constant PROG_INDENT = 8  -- tab width for editing program source files -- jjc
 			  -- (tab width is 8 for other files)
 -- Euphoria files:
-constant E_FILES = {".e", ".ex", ".exd", ".exw", ".pro", ".cgi", ".esp"}
+-- constant E_FILES = {".e", ".ex", ".exd", ".exw", ".pro", ".cgi", ".esp"}
+constant E_FILES = {".e", ".ex", ".ew", ".exw", ".eu", ".exu", ".pro", ".cgi"}  
 -- program indent files:
 constant PROG_FILES = E_FILES & {".c", ".h", ".bas"} 
 
@@ -399,88 +442,35 @@ constant ACCENT = 0  -- Set to 1 enables read accented characters from
 
 -------- END OF USER-MODIFIABLE PARAMETERS ------------------------------------
 
--- begin jjc:
-constant APPEND_MIN_SIZE = 30
+----
+--begin jjc:
+integer set_top_line_id
 
-integer first_time = TRUE
-object last_key = 0
-sequence macro_buffer = {}
-integer macro_repeat = 1
-
-function get_CUSTOM_KEYSTROKES(sequence key)
-	integer rec_num
-	if first_time != TRUE then
-		if not equal(key, last_key) then
-			rec_num = db_find_key(key)
-			if rec_num > 0 then
-				last_key = key
-				CUSTOM_KEYSTROKES = db_record_data(rec_num)
-			else
-				CUSTOM_KEYSTROKES = {}
-			end if
-		end if
+procedure cannot_allocate_msg() -- jjc
+	call_proc(set_top_line_id, {"The program has run out of memory. Try restarting your computer."})
+	if getc(0) then
 	end if
-	return CUSTOM_KEYSTROKES
+end procedure
+
+function abs(sequence s)
+	for i = 1 to length(s) do
+		if s[i] < 0 then
+			s[i] = - (s[i])
+		end if
+	end for
+	return s
 end function
 
-procedure store_CUSTOM_KEYSTROKES(sequence key, sequence buf)
-	integer rec_num
-	if equal(key, last_key) then
-		CUSTOM_KEYSTROKES = buf
-	end if
-	rec_num = db_find_key(key)
-	if rec_num < 0 then
-		if db_insert(key, buf) != DB_OK then
-			set_top_line("Error: Unable to insert macro into database.")
-			getc(0)
+function min(sequence s)
+	integer ret
+	ret = s[1]
+	for i = 2 to length(s) do
+		if ret > s[i] then
+			ret = s[i]
 		end if
-	elsif rec_num > 0 then
-		db_replace_data(rec_num, buf)
-	else
-		set_top_line("Error: Current table is not set in database.") -- current table not set
-		getc(0)
-	end if
-end procedure
-
-
-
--- Special keys that we can handle. Some are duplicates.
--- If you add more, you should list them here:
-constant SPECIAL_KEYS = {ESCAPE, BS, DELETE, XDELETE, PAGE_UP, PAGE_DOWN,
-			INSERT, HOME, END, 
-			ARROW_LEFT, ARROW_RIGHT, ARROW_UP, ARROW_DOWN, 
-			CONTROL_P, CONTROL_U, CONTROL_T, CONTROL_B,
-			CONTROL_R, CONTROL_L, CONTROL_Y, CONTROL_N,
-			CONTROL_DELETE, CONTROL_D,
-			CONTROL_ARROW_LEFT, CONTROL_ARROW_RIGHT,
-			CONTROL_ARROW_UP, CONTROL_ARROW_DOWN, -- jjc
-			CONTROL_HOME, CONTROL_END,
-			CUSTOM_KEY} & window_swap_keys & ignore_keys
-
--- output device:
-constant SCREEN = 1
-
-constant STANDARD_TAB_WIDTH = 8
-
-constant MAX_WINDOWS = 10 -- F1..F10
-
-type boolean(integer x)
-	return x = TRUE or x = FALSE
-end type
-
-type natural(integer x)
-	return x >= 0
-end type
-
-type positive_int(integer x)
-	return x >= 1
-end type
-
---begin jjc:
-procedure cannot_allocate_msg() -- jjc
-	set_top_line("The program has run out of memory. Try restarting your computer.")
-	getc(0)
-end procedure
+	end for
+	return ret
+end function
 
 -- Memory Mangagement, store lines as "C" strings with length.
 -- Store "buffer" as a linked list, so large files can load faster.
@@ -491,37 +481,37 @@ end procedure
 --      struct node1 * next; // offset: pointer_size * 3
 -- };
 constant B_BEGIN = 1, B_END = 2
-sequence buffer = {0,0} -- In-memory buffer where the file is manipulated.
+sequence buffer buffer = {0,0} -- In-memory buffer where the file is manipulated.
 -- This is a sequence where each element is a sequence
 -- containing one line of text. Each line of text ends with '\n'
-integer length_buffer = 0
-integer buffer_pos = 0
-atom buffer_ma = 0 -- the memory address of "buffer_pos" position in "buffer"
+integer length_buffer length_buffer = 0
+integer buffer_pos buffer_pos = 0
+atom buffer_ma buffer_ma = 0 -- the memory address of "buffer_pos" position in "buffer"
 
 -- Variables that must be kept "up to date":
 
 -- return buffer & {length_buffer, buffer_pos, buffer_ma}
 
-ifdef BITS64 then
-	constant pointer_size = 8
-elsedef
+--ifdef BITS64 then
+--      constant pointer_size = 8
+--elsedef
 	constant pointer_size = 4
-end ifdef
+--end ifdef
 
 function peek_address(object ma_n_length)
-ifdef BITS64 then
-	return peek8u(ma_n_length)
-elsedef
+--ifdef BITS64 then
+--      return peek8u(ma_n_length)
+--elsedef
 	return peek4u(ma_n_length)
-end ifdef
+--end ifdef
 end function
 
 procedure poke_address(atom ma, object x)
-ifdef BITS64 then
-	poke8(ma, x)
-elsedef
+--ifdef BITS64 then
+--      poke8(ma, x)
+--elsedef
 	poke4(ma, x)
-end ifdef
+--end ifdef
 end procedure
 
 -- buffer_free()
@@ -559,27 +549,26 @@ procedure buffer_seek(integer i)
 		-- something went wrong.
 		abort(1/0)
 	end if
-	tmp = math:abs({1,length_buffer,buffer_pos} - i) --here-- lookat buffer_pos and length_buffer
-	f = find(math:min(tmp), tmp)
-	switch f do -- without fallthru
-	case 1 then
+	tmp = abs({1,length_buffer,buffer_pos} - i) --here-- lookat buffer_pos and length_buffer
+	f = find(min(tmp), tmp)
+	if f = 1 then
 		if buffer[B_BEGIN] = 0 then
 			buffer[B_BEGIN] = buffer[B_END]
 		end if
 		buffer_ma = buffer[B_BEGIN]
 		buffer_pos = 1
-	case 2 then
+	elsif f = 2 then
 		if buffer[B_END] = 0 then
 			buffer[B_END] = buffer[B_BEGIN]
 		end if
 		buffer_ma = buffer[B_END]
 		buffer_pos = length_buffer
-	case 3 then
+	elsif f = 3 then
 		-- do nothing
-	case else
+	else
 		-- this code line should never be reached:
 		abort(1/0)
-	end switch
+	end if
 	
 	-- iterate closer to i
 	f = buffer_pos - i
@@ -829,6 +818,40 @@ function buffer_copy()
 end function
 
 --end jjc.
+----
+
+-- Special keys that we can handle. Some are duplicates.
+-- If you add more, you should list them here:
+constant SPECIAL_KEYS = {ESCAPE, BS, DELETE, XDELETE, PAGE_UP, PAGE_DOWN,
+			INSERT, HOME, END, 
+			ARROW_LEFT, ARROW_RIGHT, ARROW_UP, ARROW_DOWN, 
+			CONTROL_P, CONTROL_U, CONTROL_T, CONTROL_B,
+			CONTROL_R, CONTROL_L, CONTROL_Y, CONTROL_N,
+			CONTROL_DELETE, CONTROL_D,
+			CONTROL_ARROW_LEFT, CONTROL_ARROW_RIGHT,
+			CONTROL_ARROW_UP, CONTROL_ARROW_DOWN, -- jjc
+			CONTROL_HOME, CONTROL_END,
+			CUSTOM_KEY} & window_swap_keys & ignore_keys
+
+-- output device:
+constant SCREEN = 1
+
+constant STANDARD_TAB_WIDTH = 8
+
+constant MAX_WINDOWS = 10 -- F1..F10
+
+type boolean(integer x)
+	return x = TRUE or x = FALSE
+end type
+
+type natural(integer x)
+	return x >= 0
+end type
+
+type positive_int(integer x)
+	return x >= 1
+end type
+
 
 positive_int screen_length  -- number of lines on physical screen
 positive_int screen_width
@@ -1041,7 +1064,7 @@ function convert_tabs(natural old_width, natural new_width, sequence line)
 end function
 
 -- color display of lines
-include euphoria/syncolor.e
+include syncolor.e
 
 procedure reverse_video()
 -- start inverse video
@@ -1199,10 +1222,10 @@ function clean(sequence line)
 	while i < length(line) do
 	--for i = 1 to length(line)-1 do
 		c = line[i]
--- 		if c < SAFE_CHAR and c != '\t' then
--- 			line[i] = CONTROL_CHAR  -- replace with displayable character
--- 			control_chars = TRUE
--- 		end if
+--              if c < SAFE_CHAR and c != '\t' then
+--                      line[i] = CONTROL_CHAR  -- replace with displayable character
+--                      control_chars = TRUE
+--              end if
 		f = find(c, ESCAPED_CHARS)
 		if f then -- jjc
 			line = line[1..i-1] & "\\" & ESCAPE_CHARS[f] & line[i+1..$]
@@ -1220,17 +1243,17 @@ end function
 sequence chunk
 chunk = {}
 
-function add_line(file_number file_no, integer returnLine = FALSE)
+function add_line(file_number file_no, integer returnLine) -- returnLine = FALSE)
 -- add a new line to the buffer
 	sequence line
 
 	-- begin jjc:
+	integer found, flag, ch
 	if length(line_ending[1]) then
-		integer found, flag, ch
 		flag = 0
 		ch = line_ending[1][$]
 		while 1 do
-			found = find(ch, chunk, flag + 1)
+			found = find_from(ch, chunk, flag + 1)
 			if wrap_to_screen then -- and wrap_length < length(chunk) then
 				-- trace(1)
 				if found = 0 then
@@ -1265,6 +1288,7 @@ function add_line(file_number file_no, integer returnLine = FALSE)
 			-- end of file
 			return FALSE 
 		end if
+		--here, finish converting edm.exw to EDM.EX for Euphoria v3.1.1
 		line = CONTROL_CHAR & pretty_sprint(line, {0,2,1,100,"0x%02x"}) & CONTROL_CHAR & '\n'
 	end if
 
@@ -1294,14 +1318,14 @@ procedure read_file(file_number file_no)
 	chunk = {}
 	-- read and immediately display the first screen-full
 	for i = 1 to window_length do
-		if not add_line(file_no) then
+		if not add_line(file_no, FALSE) then
 			exit
 		end if
 	end for
 	DisplayWindow(1, 1)
 
 	-- read the rest
-	while add_line(file_no) do
+	while add_line(file_no, FALSE) do
 	end while
 	chunk = {}
 
@@ -1314,6 +1338,8 @@ procedure set_top_line(sequence message)
 	puts(SCREEN, message & BLANK_LINE)
 	set_position(0, length(message)+1)
 end procedure
+
+set_top_line_id = routine_id("set_top_line")
 
 procedure arrow_right()
 -- action for right arrow key
@@ -1572,13 +1598,13 @@ function hex_to_bytes(sequence string)
 	-- trace(1)
 	bytes = {}
 	if length(string) = 0 then
-		return {GET_EOF, bytes}
+		return {myget:GET_EOF, bytes}
 	end if
 	if and_bits(length(string), 1) then
 		string = '0' & string
-		status = GET_EOF
+		status = myget:GET_EOF
 	else
-		status = GET_SUCCESS
+		status = myget:GET_SUCCESS
 	end if
 	for h = 2 to length(string) by 2 do
 		n = 0
@@ -1591,10 +1617,10 @@ function hex_to_bytes(sequence string)
 			elsif string[i] >= 'A' and string[i] <= 'F' then
 				n += string[i] - 'A' + 10
 			else
-				return {GET_FAIL, bytes}
+				return {myget:GET_FAIL, bytes}
 			end if
 			if not integer(n) or n > 255 or n < 0 then
-				return {GET_FAIL, bytes}
+				return {myget:GET_FAIL, bytes}
 			end if
 		end for
 		bytes = bytes & {n}
@@ -1660,6 +1686,53 @@ procedure set_f_line(natural w, sequence comment)
 	puts(SCREEN, text)
 	normal_video()
 end procedure
+
+-- begin jjc:
+constant APPEND_MIN_SIZE = 30
+
+integer first_time first_time = TRUE
+object last_key last_key = 0
+sequence macro_buffer macro_buffer = {}
+integer macro_repeat macro_repeat = 1
+
+function get_CUSTOM_KEYSTROKES(sequence key)
+	integer rec_num
+	if first_time != TRUE then
+		if not equal(key, last_key) then
+			rec_num = db_find_key(key)
+			if rec_num > 0 then
+				last_key = key
+				CUSTOM_KEYSTROKES = db_record_data(rec_num)
+			else
+				CUSTOM_KEYSTROKES = {}
+			end if
+		end if
+	end if
+	return CUSTOM_KEYSTROKES
+end function
+
+procedure store_CUSTOM_KEYSTROKES(sequence key, sequence buf)
+	integer rec_num
+	if equal(key, last_key) then
+		CUSTOM_KEYSTROKES = buf
+	end if
+	rec_num = db_find_key(key)
+	if rec_num < 0 then
+		if db_insert(key, buf) != DB_OK then
+			--here:
+			set_top_line("Error: Unable to insert macro into database.")
+			if getc(0) then
+			end if
+		end if
+	elsif rec_num > 0 then
+		db_replace_data(rec_num, buf)
+	else
+		set_top_line("Error: Current table is not set in database.") -- current table not set
+		if getc(0) then
+		end if
+	end if
+end procedure
+-- end jjc
 
 constant W_BUFFER_NUMBER = 1,
 	 W_MY_BUFFER_VERSION = 2,
@@ -1842,7 +1915,7 @@ end procedure
 function next_key()
 -- return the next key from the user, or from our 
 -- artificial queue of keystrokes. Check for control-c.
-	extended_char c
+	extended_char c, c2
 	
 	if length(key_queue) then
 		-- read next artificial keystroke
@@ -1885,7 +1958,7 @@ function next_key()
 				return ESCAPE -- it was just the Esc key
 			end if
 			
-			ifdef UNIX then
+			if platform() = mymisc:LINUX then
 				-- ANSI codes
 				if c = 79 then
 					c = myget:wait_key()
@@ -1920,7 +1993,7 @@ function next_key()
 						end if
  
 					elsif c >= 49 and c <= 54 then
-						extended_char c2 = get_key()
+						c2 = get_key()
 						if c = 49 then 
 							if c2 = 126 then
 								return HOME
@@ -1977,7 +2050,7 @@ function next_key()
 					add_queue({c})
 				end if
 			
-			elsedef
+			else
 				-- DOS/Windows
 				if c = 79 then
 					c = myget:wait_key()
@@ -2002,7 +2075,7 @@ function next_key()
 				else
 					add_queue({c})
 				end if
-			end ifdef
+			end if
 			
 			return ESCAPE
 		end if
@@ -2030,7 +2103,9 @@ procedure refresh_all_windows()
 	restore_state(w)
 end procedure
 
-function key_gets(sequence hot_keys, sequence history, integer macro_record = TRUE, integer insert_key = 0) -- jjc
+function key_gets(sequence hot_keys, sequence history,
+	    integer macro_record, integer insert_key) -- jjc
+	    -- integer macro_record = TRUE, integer insert_key = 0) -- jjc
 -- Return an input string from the keyboard.
 -- Handles special editing keys. 
 -- Some keys are "hot" - no Enter required.
@@ -2167,18 +2242,24 @@ procedure new_screen_length()
 	window_id w
 	
 	set_top_line("How many lines on screen? (25, 28, 43, 50) ")
-	nlines = numeric(key_gets("", {}))
+	nlines = numeric(key_gets("", {}, TRUE, 0))
 	if nlines then
 		screen_length = text_rows(nlines)
+		if screen_length != nlines then
+			sound(500)
+		end if
 		config = video_config() -- jjc
-		screen_length = config[VC_SCRNLINES]
-		screen_width = config[VC_SCRNCOLS]
+		screen_length = config[VC_LINES]
+		screen_width = config[VC_COLUMNS]
 		wrap_length = screen_width - length(line_ending[2])
 		w = window_number
 		save_state()
 		set_window_size()
 		refresh_other_windows(w)
 		restore_state(w)
+		if screen_length != nlines then
+			sound(0)
+		end if
 	end if
 end procedure
 
@@ -2266,13 +2347,13 @@ function search(boolean cont)
 			if not equal(temp_string, display_string) then
 				-- new string typed in
 				search_history = update_history(search_history, display_string)
-				find_string = match_replace("\\t", display_string, '\t')
+				find_string = match_replace("\\t", display_string, '\t', 0)
 				if alphabetic(find_string) and length(display_string) < 40 then
 					set_position(0, pos[2]+length(display_string)+3)
 					puts(SCREEN, "match case? n")
 					pos = get_position()
 					set_position(0, pos[2] - 1)
-					match_case = find('y', key_gets("", {}))
+					match_case = find('y', key_gets("", {}, TRUE, 0))
 				end if
 			end if
 			if replacing then
@@ -2280,7 +2361,7 @@ function search(boolean cont)
 				puts(SCREEN, "replace INSERT: ")
 				replace_string = key_gets("", replace_history, TRUE, CONTROL_CHAR) -- jjc
 				replace_history = update_history(replace_history, replace_string)
-				replace_string = match_replace("\\t", replace_string, '\t')
+				replace_string = match_replace("\\t", replace_string, '\t', 0)
 			end if
 		end if
 	end if
@@ -2435,20 +2516,27 @@ function last_use()
 	return TRUE
 end function
 
-procedure save_file(sequence save_name, integer keep = TRUE) -- jjc
+procedure save_file(sequence save_name, integer keep) -- keep = TRUE) -- jjc
 -- write buffer to the disk file
 	file_number file_no
 	--boolean strip_cr
 	sequence line, tmp, s, last_line
 	integer found, pos
-	object ch
+	object ch, ob
 	-- begin jjc:
-	if file_exists(save_name) then
+	ch = dir(save_name)
+	--if file_exists(save_name) then
+	if sequence(ch) and length(ch) = 1 and not find('d', ch[1][D_ATTRIBUTES]) then
 		set_top_line(sprintf("Backing up %s to %s.bak ", {save_name, save_name}))
-		-- if find('y', key_gets("yn", {})) then
-			if copy_file(save_name, save_name & ".bak", 1) then
-				puts(SCREEN, " ... ok")
+		-- if find('y', key_gets("yn", {}, TRUE, 0)) then
+			if platform() = mymisc:LINUX then
+				system("cp " & save_name & " " & save_name & ".bak", 2)
+			else
+				system("COPY /Y /B " & save_name & " " & save_name & ".BAK > NUL", 2)
 			end if
+			--if copy_file(save_name, save_name & ".bak", 1) then
+				puts(SCREEN, " ... ok")
+			--end if
 		-- end if
 	end if
 	set_top_line("")
@@ -2494,12 +2582,18 @@ procedure save_file(sequence save_name, integer keep = TRUE) -- jjc
 						exit
 					end if
 					tmp = upper(line[1..2])
-					if not t_xdigit(tmp) then
-						start_line = i
+					for j = 1 to 2 do
+						ch = tmp[j]
+						if not ((ch >= '0' and ch <= '9') or (ch >= 'A' and ch <= 'F')) then
+							start_line = i
+							exit
+						end if
+					end for
+					if start_line then
 						exit
 					end if
-					tmp = value("#" & tmp)
-					if tmp[1] = GET_SUCCESS and integer(tmp[2])
+					tmp = myget:value("#" & tmp)
+					if tmp[1] = myget:GET_SUCCESS and integer(tmp[2])
 						 and tmp[2] <= 255 and tmp[2] >= 0 then -- characers are from 0 to 255
 						ch = tmp[2]
 						line = line[3..$]
@@ -2529,11 +2623,11 @@ procedure save_file(sequence save_name, integer keep = TRUE) -- jjc
 						exit
 					end if
 					if line[1] = '{' or line[1] = '\"' then
-						tmp = value(line[1..found-1])
+						tmp = myget:value(line[1..found-1])
 					else
 						tmp = hex_to_bytes(line[1..found-1])
 					end if
-					if tmp[1] = GET_SUCCESS and is_bytes(tmp[2]) then
+					if tmp[1] = myget:GET_SUCCESS and is_bytes(tmp[2]) then
 						ch = tmp[2]
 						line = line[found+1..$]
 						pos += found
@@ -2574,7 +2668,6 @@ procedure save_file(sequence save_name, integer keep = TRUE) -- jjc
 		if keep = FALSE then
 			-- load back what was written, into the memory buffer
 			-- wait until this procedure is finished.
-			object ob
 			buffer_insert_nodes_at(1, {last_line})
 			file_no = open(save_name, "rb")
 			if file_no = -1 then
@@ -2663,35 +2756,157 @@ constant names =
 		"CONTROL_ARROW_UP", "CONTROL_ARROW_DOWN", -- jjc
 		"CONTROL_DELETE"}  -- key for line-delete 
 
+procedure view_macro()
+	sequence tmp
+	integer f, key
+	sequence pos
+	
+	bk_color(BLACK)
+	text_color(WHITE)
+	clear_screen()
+	
+	tmp = get_CUSTOM_KEYSTROKES(current_macro)
+	
+	printf(1, "Macro #%s: ", {current_macro})
+	
+	for j = 1 to length(tmp) do
+		key = tmp[j]
+		f = find(key, ids)
+		if f then
+			puts(1, names[f])
+		elsif key >= SAFE_CHAR and key <= MAX_SAFE_CHAR then
+			puts(1, "\'" & key & "\'")
+		else
+			print(1, key)
+		end if
+		if j != length(tmp) then
+			puts(1, ",")
+		end if
+		pos = get_position()
+		if pos[2] + 20 > screen_width then -- max length is 20 characters
+			puts(1, "\n")
+			if pos[1] > screen_length then -- only show first 24 lines
+				exit
+			end if
+		end if
+	end for
+	--if length(CUSTOM_KEYSTROKES[macro]) then
+		--pretty_print(1, CUSTOM_KEYSTROKES[macro], {3})
+		-- --print(1, CUSTOM_KEYSTROKES[macro])
+	--end if
+	puts(1, "\n")
+	
+	if myget:wait_key() then
+	end if
+	
+	normal_video()
+	while get_key() != -1 do
+		-- clear the keyboard buffer
+	end while
+	refresh_all_windows()
+	
+	normal_video()
+	goto_line(0, b_col) -- refresh screen
+	
+	--macro_menu()
+end procedure
+
+procedure view_line()
+	-- jjc:
+	sequence line, tmp, s
+	integer found
+	object ch
+	-- view
+	bk_color(BLACK)
+	text_color(WHITE)
+	clear_screen()
+	
+	line = buffer_at(b_line)
+	line = line[b_col..$-1]
+	s = {}
+	while length(line) do
+		ch = line[1]
+		line = line[2..$]
+		if ch = CONTROL_CHAR then
+			found = find(CONTROL_CHAR, line)
+			if found then
+				if line[1] = '{' or line[1] = '\"' then
+					tmp = myget:value(line[1..found-1])
+				else
+					tmp = hex_to_bytes(line[1..found-1])
+				end if
+				if tmp[1] = myget:GET_SUCCESS then
+					if is_bytes(tmp[2]) then
+						ch = tmp[2]
+						line = line[found+1..$]
+					end if
+				end if
+			end if
+		end if
+		s = s & ch
+	end while
+	
+	--pretty_print(SCREEN, s, {2})
+	mymisc:pretty_print(SCREEN, s, {0,2,1,wrap_length,"%d","%.10g",SAFE_CHAR,MAX_SAFE_CHAR,10,1})
+	puts(SCREEN, "\n")
+	mymisc:pretty_print(SCREEN, s, {0,2,1,wrap_length,"0x%02x","%.10g",SAFE_CHAR,MAX_SAFE_CHAR,10,1})
+	puts(SCREEN, "\n")
+	mymisc:pretty_print(SCREEN, s, {1,2,1,wrap_length,"%d","%.10g",SAFE_CHAR,MAX_SAFE_CHAR,2,1})
+	--puts(SCREEN, "\n")
+	
+	if myget:wait_key() then
+	end if
+	
+	normal_video()
+	while get_key() != -1 do
+		-- clear the keyboard buffer
+	end while
+	refresh_all_windows()
+	
+	normal_video()
+	goto_line(0, b_col) -- refresh screen
+end procedure
+
+procedure setup_database()
+	if db_open(macro_database_filename, DB_LOCK_EXCLUSIVE) != DB_OK then
+		if db_create(macro_database_filename, DB_LOCK_EXCLUSIVE) != DB_OK then
+			set_top_line(sprintf("Unable to create database \"%s\"", {macro_database_filename}))
+			if getc(0) then
+			end if
+		end if
+	end if
+	if db_select_table(table_name) != DB_OK then
+		if db_create_table(table_name) != DB_OK then
+			set_top_line(sprintf("Unable to create table", {table_name}))
+			if getc(0) then
+			end if
+		else
+			store_CUSTOM_KEYSTROKES(current_macro, CUSTOM_KEYSTROKES)
+		end if
+	end if
+	set_top_line("Press Enter. " & table_name)
+	if getc(0) then
+	end if
+	set_top_line("When done editing, exit the editor by pressing [ESC] then \'q\'")
+	if getc(0) then -- make the user press Enter.
+	end if
+	first_time = FALSE
+end procedure
+
+
+
 procedure macro_menu() -- jjc
 -- process macro menu command
 	--object help = FALSE
 	
-	sequence command, filename, tmp
+	sequence command, filename, tmp, tmp1
 	--natural line
 	--object self_command
-	integer fn, num, count
+	integer fn, num, count, found
+
 
 	if first_time = TRUE then
-		if db_open(macro_database_filename, DB_LOCK_EXCLUSIVE) != DB_OK then
-			if db_create(macro_database_filename, DB_LOCK_EXCLUSIVE) != DB_OK then
-				set_top_line(sprintf("Unable to create database \"%s\"", {macro_database_filename}))
-				getc(0)
-			end if
-		end if
-		if db_select_table(table_name) != DB_OK then
-			if db_create_table(table_name) != DB_OK then
-				set_top_line(sprintf("Unable to create table", {table_name}))
-				getc(0)
-			else
-				store_CUSTOM_KEYSTROKES(current_macro, CUSTOM_KEYSTROKES)
-			end if
-		end if
-		set_top_line("Press Enter. " & table_name)
-		getc(0)
-		set_top_line("When done editing, exit the editor by pressing [ESC] then \'q\'")
-		getc(0) -- make the user press Enter.
-		first_time = FALSE
+		setup_database()
 	end if
 
 	while 1 do
@@ -2714,7 +2929,7 @@ procedure macro_menu() -- jjc
 			first_bold("name ")
 			text_color(TOP_LINE_TEXT_COLOR)
 			puts(SCREEN, "CR: ")
-			command = key_gets("xlvrsn", {}, FALSE) & ' '
+			command = key_gets("xlvrsn", {}, FALSE, 0) & ' '
 		--end if
 	-- trace(1)
 		if command[1] = 's' then
@@ -2728,7 +2943,8 @@ procedure macro_menu() -- jjc
 				current_macro = recording_macro
 				recording_macro = 0
 				--set_top_line(sprintf("current macro: %d, STOPPED RECORDING. Use F12 to play back recorded macro. CR ", {macro -  1}))
-				--getc(0) -- make the user press Enter.
+				--if getc(0) then -- make the user press Enter.
+				--end if
 				--macro_menu()
 			end if
 		elsif command[1] = 'r' then
@@ -2742,7 +2958,8 @@ procedure macro_menu() -- jjc
 				current_macro = recording_macro
 				recording_macro = 0
 				--set_top_line(sprintf("current macro: %d, STOPPED RECORDING. Use F12 to play back recorded macro. CR ", {macro -  1}))
-				--getc(0) -- make the user press Enter.
+				--if getc(0) then -- make the user press Enter.
+				--end if
 				--macro_menu()
 			else
 				-- record macros
@@ -2754,13 +2971,14 @@ procedure macro_menu() -- jjc
 			
 		elsif command[1] = 'x' then
 			set_top_line("xsave macro file name: ")
-			filename = delete_trailing_white(key_gets("", macro_file_history, FALSE))
+			filename = delete_trailing_white(key_gets("", macro_file_history, FALSE, 0))
 			if length(filename) != 0 then
 				macro_file_history = update_history(macro_file_history, filename)
 				fn = open(filename, "w")
 				if fn = -1 then
 					set_top_line("File does not exist")
-					getc(0) -- make the user press Enter.
+					if getc(0) then -- make the user press Enter.
+					end if
 				else
 					puts(fn, "\"" & table_name & "\"\n")
 					for i = 1 to db_table_size() do
@@ -2775,17 +2993,19 @@ procedure macro_menu() -- jjc
 			
 		elsif command[1] = 'l' then
 			set_top_line("load macro file name: ")
-			filename = delete_trailing_white(key_gets("", macro_file_history, FALSE))
+			filename = delete_trailing_white(key_gets("", macro_file_history, FALSE, 0))
 			if length(filename) != 0 then
 				macro_file_history = update_history(macro_file_history, filename)
 				if atom(dir(filename)) then
 					set_top_line(sprintf("File \"%s\" does not exist", {filename}))
-					getc(0) -- make the user press Enter.
+					if getc(0) then -- make the user press Enter.
+					end if
 				else
 					fn = open(MACRO_FILE, "w")
 					if fn = -1 then
 						set_top_line(sprintf("Unable to write to file \"%s\"", {MACRO_FILE}))
-						getc(0) -- make the user press Enter.
+						if getc(0) then -- make the user press Enter.
+						end if
 					else
 						puts(fn, "\"" & table_name & "\"\n")
 						for i = 1 to db_table_size() do
@@ -2804,17 +3024,18 @@ procedure macro_menu() -- jjc
 					fn = open(filename, "r")
 					if fn = -1 then
 						set_top_line(sprintf("Unable to read from file \"%s\"", {filename}))
-						getc(0) -- make the user press Enter.
+						if getc(0) then -- make the user press Enter.
+						end if
 					else
 						count = 0
-						tmp = get(fn) -- first line
-						if tmp[1] = GET_SUCCESS and equal(tmp[2], table_name) then
-							tmp = get(fn)
-							while tmp[1] = GET_SUCCESS do
+						tmp = myget:get(fn) -- first line
+						if tmp[1] = myget:GET_SUCCESS and equal(tmp[2], table_name) then
+							tmp = myget:get(fn)
+							while tmp[1] = myget:GET_SUCCESS do
 								if sequence(tmp[2]) then
 									filename = tmp[2]
-									tmp = get(fn)
-									if tmp[1] = GET_SUCCESS and sequence(tmp[2]) then
+									tmp = myget:get(fn)
+									if tmp[1] = myget:GET_SUCCESS and sequence(tmp[2]) then
 										store_CUSTOM_KEYSTROKES(filename, tmp[2])
 										count += 1
 									else
@@ -2825,16 +3046,18 @@ procedure macro_menu() -- jjc
 									count = -count
 									exit
 								end if
-								tmp = get(fn)
+								tmp = myget:get(fn)
 							end while
 						else
 							if atom(tmp[2]) or not is_bytes(tmp[2]) then
 								tmp[2] = "unknown"
 							end if
 							set_top_line(sprintf("Wrong table version: %s", {tmp[2]}))
-							getc(0)
+							if getc(0) then
+							end if
 							set_top_line(sprintf("Needs to be: %s", {table_name}))
-							getc(0)
+							if getc(0) then
+							end if
 						end if
 						close(fn)
 						if count > 0 then
@@ -2842,8 +3065,9 @@ procedure macro_menu() -- jjc
 						else
 							set_top_line(sprintf("Failed to load all macros: %d loaded", {-count}))
 						end if
-						getc(0) -- make the user press Enter.
-						--if tmp[1] = GET_SUCCESS and sequence(tmp[2]) then
+						if getc(0) then -- make the user press Enter.
+						end if
+						--if tmp[1] = myget:GET_SUCCESS and sequence(tmp[2]) then
 							--tmp = tmp[2]
 							--for i = 1 to length(tmp) do
 								--store_CUSTOM_KEYSTROKES(i - 1, tmp[i])
@@ -2851,7 +3075,8 @@ procedure macro_menu() -- jjc
 							--set_top_line("done")
 						--else
 							--set_top_line("Unable to load file")
-							--getc(0) -- make the user press Enter.
+							--if getc(0) then -- make the user press Enter.
+							--end if
 						--end if
 					end if
 				end if
@@ -2861,7 +3086,7 @@ procedure macro_menu() -- jjc
 			
 			-- change current macro, by name
 			set_top_line("macro name: ")
-			current_macro = delete_trailing_white(key_gets("", macro_name_history, FALSE))
+			current_macro = delete_trailing_white(key_gets("", macro_name_history, FALSE, 0))
 			--if length(current_macro) != 0 then
 				macro_name_history = update_history(macro_name_history, current_macro)
 			--end if
@@ -2869,7 +3094,7 @@ procedure macro_menu() -- jjc
 			while macro_repeat < 1 or macro_repeat > 1000 do
 				set_top_line(sprintf("has %d keystrokes, playback how many times (1..1000)? ",
 					{length(get_CUSTOM_KEYSTROKES(current_macro))}))
-				command = key_gets("", {}, FALSE)
+				command = key_gets("", {}, FALSE, 0)
 				if length(command) then
 					if command[1] >= '0' and command[1] <= '9' then
 						macro_repeat = numeric(command)
@@ -2883,57 +3108,7 @@ procedure macro_menu() -- jjc
 			-- view macros
 			--example:  ESCAPE,'f',CR,ARROW_RIGHT,BS,'e',ARROW_LEFT
 			
-			integer f, key
-			sequence pos
-			
-			bk_color(BLACK)
-			text_color(WHITE)
-			clear_screen()
-			--for i = 1 to length do
-				
-				tmp = get_CUSTOM_KEYSTROKES(current_macro)
-				
-				printf(1, "Macro #%s: ", {current_macro})
-				
-				for j = 1 to length(tmp) do
-					key = tmp[j]
-					f = find(key, ids)
-					if f then
-						puts(1, names[f])
-					elsif key >= SAFE_CHAR and key <= MAX_SAFE_CHAR then
-						puts(1, "\'" & key & "\'")
-					else
-						print(1, key)
-					end if
-					if j != length(tmp) then
-						puts(1, ",")
-					end if
-					pos = get_position()
-					if pos[2] + 20 > screen_width then -- max length is 20 characters
-						puts(1, "\n")
-						if pos[1] > screen_length then -- only show first 24 lines
-							exit
-						end if
-					end if
-				end for
-				--if length(CUSTOM_KEYSTROKES[macro]) then
-					--pretty_print(1, CUSTOM_KEYSTROKES[macro], {3})
-					-- --print(1, CUSTOM_KEYSTROKES[macro])
-				--end if
-				puts(1, "\n")
-			--end for
-			myget:wait_key()
-			
-			normal_video()
-			while get_key() != -1 do
-				-- clear the keyboard buffer
-			end while
-			refresh_all_windows()
-			
-			normal_video()
-			goto_line(0, b_col) -- refresh screen
-			
-			--macro_menu()
+			view_macro()
 			
 		else
 			set_top_line("")
@@ -2941,22 +3116,20 @@ procedure macro_menu() -- jjc
 				puts(SCREEN, "empty buffer")
 			else
 				-- begin jjc:
-				object tmp1 -- jjc
-				integer found
 				tmp1 = expand_tabs(edit_tab_width, buffer_at(b_line))
 				if tmp1[s_col] = CONTROL_CHAR then
 					tmp1 = tmp1[s_col+1..$]
 					found = find(CONTROL_CHAR, tmp1)
 					if found then
 						if tmp1[1] = '{' or tmp1[1] = '\"' then
-							tmp = value(tmp1[1..found-1])
+							tmp = myget:value(tmp1[1..found-1])
 						else
 							tmp = hex_to_bytes(tmp1[1..found-1])
 						end if
-						if tmp[1] = GET_SUCCESS then
+						if tmp[1] = myget:GET_SUCCESS then
 							if is_bytes(tmp[2]) then
 								tmp1 = tmp[2]
-								pretty_print(SCREEN,tmp1,{1,0,1,wrap_length,"%d","%.10g",SAFE_CHAR,MAX_SAFE_CHAR,1,0})
+								mymisc:pretty_print(SCREEN,tmp1,{1,0,1,wrap_length,"%d","%.10g",SAFE_CHAR,MAX_SAFE_CHAR,1,0})
 							end if
 						end if
 					end if
@@ -2980,351 +3153,7 @@ procedure macro_menu() -- jjc
 
 end procedure
 
-procedure get_escape(boolean help)
--- process escape command
-	sequence command, answer
-	natural line_num
-	object self_command
-
-	cursor(ED_CURSOR)
-
-	set_top_line("")
-	if help then
-		command = "h"
-	else
-		first_bold("j") -- jjc
-		first_bold("b") -- jjc
-		first_bold("p") -- jjc, for line endings
-		first_bold("v ") -- jjc
-		first_bold("help ")
-		first_bold("clone ")
-		first_bold("quit ")
-		first_bold("save ")
-		first_bold("write ")
-		first_bold("new ")
-		if dot_e then
-			first_bold("eui ")
-		end if
-		first_bold("dos ")
-		first_bold("find ")
-		first_bold("replace ")
-		first_bold("lines ")
-		first_bold("mods ")
-		text_color(TOP_LINE_TEXT_COLOR)
-		--puts(SCREEN, "ddd CR: ")
-		command = key_gets("pbjvhcqswnedfrlm", {}) & ' ' -- jjc
-	end if
-
-	if command[1] = 'v' then -- view line
-		-- jjc:
-		sequence line, tmp, s
-		integer found
-		object ch
-		-- view
-		bk_color(BLACK)
-		text_color(WHITE)
-		clear_screen()
-		
-		line = buffer_at(b_line)
-		line = line[b_col..$-1]
-		s = {}
-		while length(line) do
-			ch = line[1]
-			line = line[2..$]
-			if ch = CONTROL_CHAR then
-				found = find(CONTROL_CHAR, line)
-				if found then
-					if line[1] = '{' or line[1] = '\"' then
-						tmp = value(line[1..found-1])
-					else
-						tmp = hex_to_bytes(line[1..found-1])
-					end if
-					if tmp[1] = GET_SUCCESS then
-						if is_bytes(tmp[2]) then
-							ch = tmp[2]
-							line = line[found+1..$]
-						end if
-					end if
-				end if
-			end if
-			s = s & ch
-		end while
-		
-		--pretty_print(SCREEN, s, {2})
-		pretty_print(SCREEN, s, {0,2,1,wrap_length,"%d","%.10g",SAFE_CHAR,MAX_SAFE_CHAR,10,1})
-		puts(SCREEN, "\n")
-		pretty_print(SCREEN, s, {0,2,1,wrap_length,"0x%02x","%.10g",SAFE_CHAR,MAX_SAFE_CHAR,10,1})
-		puts(SCREEN, "\n")
-		pretty_print(SCREEN, s, {1,2,1,wrap_length,"%d","%.10g",SAFE_CHAR,MAX_SAFE_CHAR,2,1})
-		--puts(SCREEN, "\n")
-		
-		myget:wait_key()
-		
-		normal_video()
-		while get_key() != -1 do
-			-- clear the keyboard buffer
-		end while
-		refresh_all_windows()
-		
-		normal_video()
-		goto_line(0, b_col) -- refresh screen
-		
-		
-	elsif command[1] = 'b' then -- jjc
-		set_top_line("insert hexadecimal: 0x")
-		command = key_gets("", {})
-		-- inserting a sequence of chars
-		answer = CONTROL_CHAR & command & CONTROL_CHAR -- default
-		command = hex_to_bytes(command)
-		if command[1] = GET_SUCCESS then -- special cases
-			if length(command[2]) = 1 then -- will not be zero.
-				answer = sprintf("\\x%02x", command[2]) -- command[2] length is one (1).
-			else
-				command = command[2]
-				set_top_line("little endian [reversed: 0xabcd to {#cd, #ab}]? ")
-				if find('y', key_gets("yn", {})) then
-					command = reverse(command)
-				end if
-				answer = CONTROL_CHAR & "{"
-				for i = 1 to length(command) do
-					answer = answer & sprintf("0x%02x, ", {command[i]})
-				end for
-				answer[$-1] = '}'
-				answer[$] = CONTROL_CHAR
-			end if
-		else
-			set_top_line("Warning, ")
-			if command[1] = GET_EOF then
-				puts(SCREEN, "length of hex string is not even (divisible by two).")
-			else
-				printf(SCREEN, "you may need to edit between control characters (%s).", {CONTROL_CHAR})
-			end if
-		end if
-		normal_video()
-		set_modified()
-		insert_string(answer)
-		return
-
-	elsif command[1] = 'j' then -- jjc
-		if sequence(recording_macro) then
-			macro_buffer = macro_buffer[1..$-2]
-		end if
-		macro_menu()
-	
-	elsif command[1] = 'f' then
-		replacing = FALSE
-		searching = search(FALSE)
-
-	elsif command[1] = 'r' then
-		replacing = TRUE
-		searching = search(FALSE)
-
-	elsif command[1] = 'q' then
-		if modified and last_use() then
-			set_top_line("quit without saving changes? ")
-			if find('y', key_gets("yn", {})) then
-				stop = delete_window()
-			end if
-		else
-			stop = delete_window()
-		end if
-	
-	elsif command[1] = 'c' then
-		clone_window()
-		
-	elsif command[1] = 'n' then
-		set_top_line("new file name: ")
-		answer = delete_trailing_white(key_gets("", file_history))
-		if length(answer) != 0 then
-			stop = TRUE -- new file supplied, so stop is set to TRUE.
-			if modified and last_use() then
-				while TRUE do
-					set_top_line("")
-					printf(SCREEN, "save changes to %s? ", {file_name})
-					self_command = key_gets("yn", {})
-					if find('y', self_command) then
-						save_file(file_name, FALSE) -- keep file in memory is FALSE,
-						-- because it is modified, it is the last instance, and there is a new file.
-						exit
-					elsif find('n', self_command) then
-						exit
-					end if
-				end while
-			end if
-			if stop = TRUE then
-				save_state()
-				file_name = answer
-			end if
-		end if
-		
-	elsif command[1] = 'w' then
-		save_file(file_name, TRUE) -- keep file in memory is TRUE
-		stop = FALSE
-
-	elsif command[1] = 's' then
-		save_file(file_name, FALSE) -- keep file in memory is FALSE
-		if stop then
-			stop = delete_window()
-		end if
-
-	elsif command[1] = 'e' and dot_e then
-		if modified then
-			save_file(file_name)
-			if stop = FALSE then
-				normal_video()
-				return
-			end if
-			stop = FALSE
-		end if
-		-- execute the current file & return
-		if sequence(dir("ex.err")) then
-			ifdef UNIX then
-				system(delete_cmd & "ex.err", 0)
-			elsedef
-				system(delete_cmd & "ex.err > NUL", 0)
-			end ifdef
-		end if
-		ifdef UNIX then
-			shell("eui \"" & file_name & "\"")
-		elsedef
-			if match(".exw", lower(file_name)) or 
-				  match(".ew",  lower(file_name)) then
-				shell("euiw \"" & file_name & "\"")
-			else
-				shell("eui \"" & file_name & "\"")
-			end if
-		end ifdef
-		goto_line(0, b_col)
-		if equal(file_name, get_err_line()) then
-			goto_line(start_line, 1)
-			set_err_pointer()
-			show_message()
-		end if
-
-	elsif command[1] = 'd' then
-		set_top_line("opsys command? ")
-		command = key_gets("", command_history)
-		if length(delete_trailing_white(command)) > 0 then
-			shell(command)
-			command_history = update_history(command_history, command)
-		end if
-		normal_video()
-		goto_line(0, b_col) -- refresh screen
-	
-	elsif command[1] = 'm' then
-		-- show differences between buffer and file on disk
-		save_file(TEMPFILE)
-		if stop then
-			stop = FALSE
-			shell(compare_cmd & file_name & " " & TEMPFILE & " | more")
-			normal_video()
-			goto_line(0, b_col)
-			editbuff = TRUE
-		end if
-		
-	elsif command[1] = 'h' then
-		self_command = getenv("EUDIR")
-		if atom(self_command) then
-			-- Euphoria hasn't been installed yet 
-			set_top_line("EUDIR not set. See installation documentation.")
-		else    
-			self_command &= SLASH & "docs"
-			if help then
-				-- trace(1)
-				set_top_line(
-				"That key does nothing - do you want to view the help text? ")
-				answer = key_gets("yn", {}) & ' '
-				if answer[1] = 'n' or answer[1] = 'N' then
-					set_top_line("")
-				else
-					answer = "yes"
-				end if
-			else
-				answer = "yes"
-			end if
-			if answer[1] = 'y' then
-				system(self_command & SLASH & "html" & SLASH & "index.html")
-			else
-				normal_video()
-			end if
-		end if
-
-	elsif command[1] = 'l' then
-		set_top_line("Word wrap to screen, for newly opened files? ")
-		answer = key_gets("yn", {}) & ' '
-		-- default is "no"
-		wrap_to_screen = answer[1] = 'y' or answer[1] = 'Y'
-		new_screen_length()
-
-	elsif command[1] >= '0' and command[1] <= '9' then
-		line_num = numeric(command)
-		normal_video()
-		goto_line(line_num, 1)
-		if not buffer_line(line_num) then
-			set_top_line("")
-			printf(SCREEN, "lines are 1..%d", length_buffer)
-		end if
-
-	elsif command[1] = 'p' then -- jjc, preferences
-		-- change line endings
-		set_top_line("Change new line endings to Windows/Linux/Apple or None? [wlan]")
-		answer = key_gets("wlan", {}) & ' '
-		puts(SCREEN, answer[1] & " OK")
-		if answer[1] = 'w' then
-			line_ending = WINDOWS_CR
-		elsif answer[1] = 'l' then
-			line_ending = LINUX_CR
-		elsif answer[1] = 'a' then
-			line_ending = APPLE_CR
-		elsif answer[1] = 'n' then
-			line_ending = {"",""} -- binary, no line ending characters (CR is just for displaying the file)
-		end if
-		set_top_line(sprintf("Line ending: %s", {line_ending[2]})) -- no change in line endings
-		wrap_length = screen_width - length(line_ending[2])
-		
-	else
-		set_top_line("")
-		if length_buffer = 0 then
-			puts(SCREEN, "empty buffer")
-		else
-			-- begin jjc:
-			object tmp1, tmp -- jjc
-			integer found
-			tmp1 = expand_tabs(edit_tab_width, buffer_at(b_line))
-			if tmp1[s_col] = CONTROL_CHAR then
-				tmp1 = tmp1[s_col+1..$]
-				found = find(CONTROL_CHAR, tmp1)
-				if found then
-					if tmp1[1] = '{' or tmp1[1] = '\"' then
-						tmp = value(tmp1[1..found-1])
-					else
-						tmp = hex_to_bytes(tmp1[1..found-1])
-					end if
-					if tmp[1] = GET_SUCCESS then
-						if is_bytes(tmp[2]) then
-							tmp1 = tmp[2]
-							pretty_print(SCREEN,tmp1,{1,0,1,wrap_length,"%d","%.10g",SAFE_CHAR,MAX_SAFE_CHAR,1,0})
-						end if
-					end if
-				end if
-			else
-				printf(SCREEN, "%s line %d of %d, column %d of %d, ",
-					   {file_name, b_line, length_buffer, s_col,
-						length(tmp1)-1})
-				if modified then
-					puts(SCREEN, "modified")
-				else
-					puts(SCREEN, "not modified")
-				end if
-				printf(SCREEN, ", character: %d (0x%02x)", {tmp1[s_col], tmp1[s_col]})
-			end if
-			-- end jjc.
-		end if
-	end if
-
-	normal_video()
-end procedure
-
+-- xinsert and insert
 procedure xinsert(char key)
 -- insert a character into the current line at the current position
 
@@ -3424,13 +3253,315 @@ procedure insert_string(sequence text)
 	goto_line(save_line, save_col)
 end procedure
 
+-- escape menu:
+procedure get_escape(boolean help)
+-- process escape command
+	sequence command, answer
+	natural line_num
+	object self_command, tmp1, tmp -- jjc
+	integer found
+
+	cursor(ED_CURSOR)
+
+	set_top_line("")
+	if help then
+		command = "h"
+	else
+		first_bold("j") -- jjc
+		first_bold("b") -- jjc
+		first_bold("p") -- jjc, for line endings
+		first_bold("v ") -- jjc
+		first_bold("help ")
+		first_bold("clone ")
+		first_bold("quit ")
+		first_bold("save ")
+		first_bold("write ")
+		first_bold("new ")
+		if dot_e then
+			first_bold("eui ")
+		end if
+		first_bold("dos ")
+		first_bold("find ")
+		first_bold("replace ")
+		first_bold("lines ")
+		first_bold("mods ")
+		text_color(TOP_LINE_TEXT_COLOR)
+		--puts(SCREEN, "ddd CR: ")
+		command = key_gets("pbjvhcqswnedfrlm", {}, TRUE, 0) & ' ' -- jjc
+	end if
+
+	if command[1] = 'v' then -- view line
+		
+		view_line()
+		
+		
+	elsif command[1] = 'b' then -- jjc
+		set_top_line("insert hexadecimal: 0x")
+		command = key_gets("", {}, TRUE, 0)
+		-- inserting a sequence of chars
+		answer = CONTROL_CHAR & command & CONTROL_CHAR -- default
+		command = hex_to_bytes(command)
+		if command[1] = myget:GET_SUCCESS then -- special cases
+			if length(command[2]) = 1 then -- will not be zero.
+				answer = sprintf("\\x%02x", command[2]) -- command[2] length is one (1).
+			else
+				command = command[2]
+				set_top_line("little endian [reversed: 0xabcd to {#cd, #ab}]? ")
+				if find('y', key_gets("yn", {}, TRUE, 0)) then
+					command = mymisc:reverse(command)
+				end if
+				answer = CONTROL_CHAR & "{"
+				for i = 1 to length(command) do
+					answer = answer & sprintf("0x%02x, ", {command[i]})
+				end for
+				answer[$-1] = '}'
+				answer[$] = CONTROL_CHAR
+			end if
+		else
+			set_top_line("Warning, ")
+			if command[1] = myget:GET_EOF then
+				puts(SCREEN, "length of hex string is not even (divisible by two).")
+			else
+				printf(SCREEN, "you may need to edit between control characters (%s).", {CONTROL_CHAR})
+			end if
+		end if
+		normal_video()
+		set_modified()
+		insert_string(answer)
+		return
+
+	elsif command[1] = 'j' then -- jjc
+		if sequence(recording_macro) then
+			macro_buffer = macro_buffer[1..$-2]
+		end if
+		macro_menu()
+	
+	elsif command[1] = 'f' then
+		replacing = FALSE
+		searching = search(FALSE)
+
+	elsif command[1] = 'r' then
+		replacing = TRUE
+		searching = search(FALSE)
+
+	elsif command[1] = 'q' then
+		if modified and last_use() then
+			set_top_line("quit without saving changes? ")
+			if find('y', key_gets("yn", {}, TRUE, 0)) then
+				stop = delete_window()
+			end if
+		else
+			stop = delete_window()
+		end if
+	
+	elsif command[1] = 'c' then
+		clone_window()
+		
+	elsif command[1] = 'n' then
+		set_top_line("new file name: ")
+		answer = delete_trailing_white(key_gets("", file_history, TRUE, 0))
+		if length(answer) != 0 then
+			stop = TRUE -- new file supplied, so stop is set to TRUE.
+			if modified and last_use() then
+				while TRUE do
+					set_top_line("")
+					printf(SCREEN, "save changes to %s? ", {file_name})
+					self_command = key_gets("yn", {}, TRUE, 0)
+					if find('y', self_command) then
+						save_file(file_name, FALSE) -- keep file in memory is FALSE,
+						-- because it is modified, it is the last instance, and there is a new file.
+						exit
+					elsif find('n', self_command) then
+						exit
+					end if
+				end while
+			end if
+			if stop = TRUE then
+				save_state()
+				file_name = answer
+			end if
+		end if
+		
+	elsif command[1] = 'w' then
+		save_file(file_name, TRUE) -- keep file in memory is TRUE
+		stop = FALSE
+
+	elsif command[1] = 's' then
+		save_file(file_name, FALSE) -- keep file in memory is FALSE
+		if stop then
+			stop = delete_window()
+		end if
+
+	elsif command[1] = 'e' and dot_e then
+		if modified then
+			save_file(file_name, TRUE)
+			if stop = FALSE then
+				normal_video()
+				return
+			end if
+			stop = FALSE
+		end if
+		-- execute the current file & return
+		if sequence(dir("ex.err")) then
+			if platform() = mymisc:LINUX then
+				system(delete_cmd & "ex.err", 0)
+			else
+				system(delete_cmd & "ex.err > NUL", 0)
+			end if
+		end if
+		if platform() = mymisc:LINUX then
+			shell("exu \"" & file_name & "\"")
+		else
+			if match(".exw", lower(file_name)) or 
+				  match(".ew",  lower(file_name)) then
+				shell("exw \"" & file_name & "\"")
+			else
+				shell("ex " & file_name)
+			end if
+		end if
+		goto_line(0, b_col)
+		if equal(file_name, get_err_line()) then
+			goto_line(start_line, 1)
+			set_err_pointer()
+			show_message()
+		end if
+
+	elsif command[1] = 'd' then
+		set_top_line("opsys command? ")
+		command = key_gets("", command_history, TRUE, 0)
+		if length(delete_trailing_white(command)) > 0 then
+			shell(command)
+			command_history = update_history(command_history, command)
+		end if
+		normal_video()
+		goto_line(0, b_col) -- refresh screen
+	
+	elsif command[1] = 'm' then
+		-- show differences between buffer and file on disk
+		save_file(TEMPFILE, TRUE)
+		if stop then
+			stop = FALSE
+			shell(compare_cmd & file_name & " " & TEMPFILE & " | more")
+			normal_video()
+			goto_line(0, b_col)
+			editbuff = TRUE
+		end if
+		
+	elsif command[1] = 'h' then
+		self_command = getenv("EUDIR")
+		if atom(self_command) then
+		    -- Euphoria hasn't been installed yet 
+		    set_top_line("EUDIR not set. See install.doc")
+		else    
+		    if HOT_KEYS then
+			self_command = {ESCAPE, 'c', ESCAPE, 'n'} & self_command 
+		    else
+			self_command = {ESCAPE, 'c', '\n', ESCAPE, 'n', '\n'} & self_command 
+		    end if
+		    self_command &= SLASH & "doc"
+		    if help then
+			set_top_line(
+			"That key does nothing - do you want to view the help text? ")
+			answer = key_gets("yn", {}, TRUE, 0) & ' '
+			if answer[1] != 'n' and answer[1] != 'N' then
+			    answer = "e"
+			end if
+		    else
+			set_top_line("ed.doc, refman.doc, or library.doc? (e, r or l): ")
+			answer = key_gets("erl", {}, TRUE, 0) & ' '
+		    end if
+		    if answer[1] = 'r' then
+			add_queue(self_command & SLASH & "refman.doc" & CR)
+		    elsif answer[1] = 'e' then
+			add_queue(self_command & SLASH & "ed.doc" & CR)
+		    elsif answer[1] = 'l' then
+			add_queue(self_command & SLASH & "library.doc" & CR)
+		    else
+			normal_video()
+		    end if
+		end if
+
+	elsif command[1] = 'l' then
+		set_top_line("Word wrap to screen, for newly opened files? ")
+		answer = key_gets("yn", {}, TRUE, 0) & ' '
+		-- default is "no"
+		wrap_to_screen = answer[1] = 'y' or answer[1] = 'Y'
+		new_screen_length()
+
+	elsif command[1] >= '0' and command[1] <= '9' then
+		line_num = numeric(command)
+		normal_video()
+		goto_line(line_num, 1)
+		if not buffer_line(line_num) then
+			set_top_line("")
+			printf(SCREEN, "lines are 1..%d", length_buffer)
+		end if
+
+	elsif command[1] = 'p' then -- jjc, preferences
+		-- change line endings
+		set_top_line("Change new line endings to Windows/Linux/Apple or None? [wlan]")
+		answer = key_gets("wlan", {}, TRUE, 0) & ' '
+		puts(SCREEN, answer[1] & " OK")
+		if answer[1] = 'w' then
+			line_ending = WINDOWS_CR
+		elsif answer[1] = 'l' then
+			line_ending = LINUX_CR
+		elsif answer[1] = 'a' then
+			line_ending = APPLE_CR
+		elsif answer[1] = 'n' then
+			line_ending = {"",""} -- binary, no line ending characters (CR is just for displaying the file)
+		end if
+		set_top_line(sprintf("Line ending: %s", {line_ending[2]})) -- no change in line endings
+		wrap_length = screen_width - length(line_ending[2])
+		
+	else
+		set_top_line("")
+		if length_buffer = 0 then
+			puts(SCREEN, "empty buffer")
+		else
+			-- begin jjc:
+			tmp1 = expand_tabs(edit_tab_width, buffer_at(b_line))
+			if tmp1[s_col] = CONTROL_CHAR then
+				tmp1 = tmp1[s_col+1..$]
+				found = find(CONTROL_CHAR, tmp1)
+				if found then
+					if tmp1[1] = '{' or tmp1[1] = '\"' then
+						tmp = myget:value(tmp1[1..found-1])
+					else
+						tmp = hex_to_bytes(tmp1[1..found-1])
+					end if
+					if tmp[1] = myget:GET_SUCCESS then
+						if is_bytes(tmp[2]) then
+							tmp1 = tmp[2]
+							mymisc:pretty_print(SCREEN,tmp1,{1,0,1,wrap_length,"%d","%.10g",SAFE_CHAR,MAX_SAFE_CHAR,1,0})
+						end if
+					end if
+				end if
+			else
+				printf(SCREEN, "%s line %d of %d, column %d of %d, ",
+					   {file_name, b_line, length_buffer, s_col,
+						length(tmp1)-1})
+				if modified then
+					puts(SCREEN, "modified")
+				else
+					puts(SCREEN, "not modified")
+				end if
+				printf(SCREEN, ", character: %d (0x%02x)", {tmp1[s_col], tmp1[s_col]})
+			end if
+			-- end jjc.
+		end if
+	end if
+
+	normal_video()
+end procedure
+
 -- expandable words & corresponding text
 constant expand_word = {"if", "for", "while", "elsif",
-						"procedure", "type", "function"},
+			"procedure", "type", "function"},
 
-		 expand_text = {" then",  "=  to  by  do",  " do",  " then",
-						"()",  "()",  "()" 
-					   }
+expand_text = {" then",  "=  to  by  do",  " do",  " then",
+		"()",  "()",  "()"}
+
 
 procedure try_auto_complete(char key)
 -- check for a keyword that can be automatically completed
@@ -3626,7 +3757,9 @@ end function
 procedure edit_file()
 -- edit the file in buffer
 	extended_char key
-	sequence tmp
+	sequence tmp, s
+	integer next_window, len
+	
 
 	if length_buffer > 0 then
 		if start_line > 0 then
@@ -3675,7 +3808,7 @@ procedure edit_file()
 				end for
 
 			elsif find(key, window_swap_keys) then
-				integer next_window = find(key, window_swap_keys)
+				next_window = find(key, window_swap_keys)
 				if next_window <= length(window_list) then
 					switch_window(next_window)
 				else
@@ -3793,8 +3926,6 @@ procedure edit_file()
 				
 				elsif key = END then
 					-- begin jjc:
-					sequence s
-					integer len
 					len = buffer_at_length(b_line)
 					if length(line_ending[1]) then
 						s = line_ending[2]
@@ -3866,20 +3997,20 @@ procedure ed(sequence command)
 	start_col = 0
 
 	if length(command) >= 3 then
-		ifdef UNIX then
+		if platform() = mymisc:LINUX then
 			file_name = command[3]
-		elsedef
+		else
 			file_name = lower(command[3])
-		end ifdef
+		end if
 	else
 		file_name = get_err_line()
 	end if
-	graphics:wrap(0)
+	wrap(0)
 	if length(file_name) = 0 then
 		-- we still don't know the file name - so ask user
 		puts(SCREEN, "file name: ")
 		cursor(ED_CURSOR)
-		file_name = key_gets("", file_history)
+		file_name = key_gets("", file_history, TRUE, 0)
 		puts(SCREEN, '\n')
 	end if
 	file_name = delete_trailing_white(file_name)
@@ -3919,13 +4050,13 @@ procedure ed(sequence command)
 	
 	if multi_color then
 		init_class()
-		set_colors({
-				{"NORMAL", NORMAL_COLOR},
-				{"COMMENT", COMMENT_COLOR},
-				{"KEYWORD", KEYWORD_COLOR},
-				{"BUILTIN", BUILTIN_COLOR},
-				{"STRING", STRING_COLOR},
-				{"BRACKET", BRACKET_COLOR}})    
+--              set_colors({
+--                              {"NORMAL", NORMAL_COLOR},
+--                              {"COMMENT", COMMENT_COLOR},
+--                              {"KEYWORD", KEYWORD_COLOR},
+--                              {"BUILTIN", BUILTIN_COLOR},
+--                              {"STRING", STRING_COLOR},
+--                              {"BRACKET", BRACKET_COLOR}})    
 	end if
 
 	file_name = file_name[1..$-1] -- remove ' '
@@ -3960,7 +4091,6 @@ end procedure
 
 procedure ed_main()
 -- startup and shutdown of ed()
-	sequence cl
 
 	allow_break(FALSE)
 	
@@ -3969,22 +4099,19 @@ procedure ed_main()
 		config = video_config()
 	end if
 
-	if config[VC_SCRNLINES] != INITIAL_LINES then
+	if config[VC_LINES] != INITIAL_LINES then
 		screen_length = text_rows(INITIAL_LINES)
 		config = video_config()
 	end if
-	screen_length = config[VC_SCRNLINES]
-	screen_width = config[VC_SCRNCOLS]
-	wrap_length = screen_width - length(line_ending[2])
-
+	screen_length = config[VC_LINES]
+	screen_width = config[VC_COLUMNS]
+	wrap_length = screen_width - length(line_ending[2]) --jjc
 	BLANK_LINE = repeat(' ', screen_width)
 	window_length = screen_length - 1
 
-	cl = command_line()
-
 	while length(window_list) > 0 do
 		ed(cl)
-		cl = {"eui", "ed.ex" , file_name}
+		cl = {"ex", "ed.ex" , file_name}
 	end while
 
 	-- exit editor
@@ -3994,7 +4121,7 @@ procedure ed_main()
 		screen_length = text_rows(FINAL_LINES)
 	end if
 	
-if 0 then
+if 1 then
 	cursor(UNDERLINE_CURSOR)
 	bk_color(BLACK)
 	text_color(WHITE)
@@ -4002,15 +4129,13 @@ if 0 then
 	puts(SCREEN, BLANK_LINE)
 	position(screen_length, 1)
 	puts(SCREEN, "\n")
-end if
-	
 	clear_screen()
-	ifdef UNIX then
-		free_console()
-	end ifdef
+end if
+
 end procedure
 
 ed_main()
+
 if first_time = FALSE then
 	if db_compress() != DB_OK then
 		-- wasn't able to compress database file
@@ -4020,5 +4145,8 @@ end if
 
 -- This abort statement reduces the chance of 
 -- a syntax error when you edit ed.ex using itself: 
+if platform() = mymisc:LINUX then
+    free_console()
+end if
 abort(0) 
 

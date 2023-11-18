@@ -16,4 +16,5 @@ rem
 rem ------------------------------------------------------------------------------
 rem 
 @rem  you could also try:  ex ed.ex %1 %2 %3
-exwc.exe ed_macro.ex %1 %2 %3
+rem exwc edm.ex /USE_CONTROL_KEYS %1 %2 %3
+exwc edm.ex /USE_CONTROL_KEYS %1 %2 %3

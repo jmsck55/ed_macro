@@ -590,47 +590,26 @@ without warning
 function clean(sequence line)
 -- replace control characters with a graphics character
 -- Linux: replace CR-LF with LF (for now)
-    integer c, i
-    sequence tmp
+    integer c
     
-    while i <= length(line) do
+    for i = 1 to length(line) do
 	c = line[i]
 	if c < SAFE_CHAR and c != '\n' and c != '\t' then
 	    if c != '\r' or platform() != LINUX then
-		tmp = sprintf("\\d%d", {c})
-		-- tmp = sprintf("\\x%02x", {c})
-		--line[i] = sprintf("\\d%d", {c}) -- CONTROL_CHAR  -- replace with displayable character
-		--line[i] = sprintf("\\x%02x", {c}) -- CONTROL_CHAR  -- replace with displayable character
-		-- \ would have to be convertd to \\ OK?
-		line = line[1..i - 1] & tmp & line[i + 1..length(line)]
-		i += length(tmp) - 1
+		line[i] = CONTROL_CHAR  -- replace with displayable character
 		control_chars = TRUE
 	    end if
 	end if
-	i += 1
-    end while
-    --if line[length(line)] != '\n' then
-    --	line &= '\n'
-    --end if
-    --if platform() = LINUX and 
-    if length(line) >= 1 then
-	if line[length(line)] = '\n' then
-	    tmp = "\\n"
-	    line = line[1..length(line) - 1]
-	else
-	    tmp = {}
-	end if
-	if line[length(line)] = '\r' then
-	    if platform() = LINUX and length(tmp) then
-		cr_removed = TRUE
-	    end if
-	    tmp = "\\r" & tmp
-	    line = line[1..length(line) - 1]
-	end if
-	--if line[length(line)-1] = '\r' then
-	---- DOS file: remove CR
-	--cr_removed = TRUE
-	line = line & tmp & "\n"
+    end for
+    if line[length(line)] != '\n' then
+	line &= '\n'
+    end if
+    if platform() = LINUX and 
+       length(line) > 1 and 
+       line[length(line)-1] = '\r' then
+       -- DOS file: remove CR
+       cr_removed = TRUE
+       line = line[1..length(line)-2] & '\n'
     end if
     return line
 end function
@@ -1685,7 +1664,7 @@ procedure save_file(sequence save_name)
 	strip_cr = find('y', key_gets("yn", {}))
     end if
     set_top_line("")
-    file_no = open(save_name, "wb")
+    file_no = open(save_name, "w")
     if file_no = -1 then
 	printf(SCREEN, "Can't save %s - write permission denied", 
 	      {save_name})
@@ -2548,7 +2527,7 @@ procedure ed(sequence command)
 	abort(1) -- file_name was just whitespace - quit
     end if
     file_history = update_history(file_history, file_name)
-    file_no = open(file_name, "rb")
+    file_no = open(file_name, "r")
 
     -- turn off multi_color & auto_complete for non .e files
     multi_color = WANT_COLOR_SYNTAX
