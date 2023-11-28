@@ -1,0 +1,7 @@
+
+include file.e
+
+? dir("a.exw")
+
+if getc(0) then
+end if
